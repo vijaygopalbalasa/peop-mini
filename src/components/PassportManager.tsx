@@ -70,7 +70,7 @@ export default function PassportManager() {
     <div className="card p-5 text-center">
       <h2 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">Create Your Proof-of-Existence Passport</h2>
       <p className="mb-4 text-gray-700 dark:text-gray-300">Mint your unique, soul-bound NFT to establish your onchain identity.</p>
-      <MintButton />
+      <MintButton onMintSuccess={checkPassport} />
     </div>
   );
 }
