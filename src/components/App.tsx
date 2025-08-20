@@ -84,20 +84,18 @@ export default function App(
     if (!isSDKLoaded) return;
     let cancelled = false;
     const callReady = async () => {
-      console.log('Farcaster SDK: Attempting to call ready.');
       try {
         await sdk.context;
         if (!cancelled) {
           await sdk.actions.ready();
-          console.log('Farcaster SDK: ready() called successfully in initial try.');
         }
       } catch (e) {
         console.error('Farcaster SDK: Error in initial ready() call, will retry.', e);
+        // Retry after a short delay
         setTimeout(async () => {
           try {
             if (!cancelled) {
               await sdk.actions.ready();
-              console.log('Farcaster SDK: ready() called successfully on retry.');
             }
           } catch (e2) {
             console.error('Farcaster SDK: Error on retry ready() call.', e2);
