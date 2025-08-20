@@ -51,9 +51,15 @@ export function SignEvmMessage() {
    */
   const signEvmMessage = useCallback(async () => {
     if (!isConnected) {
+      const isMiniApp = typeof window !== 'undefined' && typeof (window as any).farcaster !== 'undefined';
+      // Prefer Farcaster connector in Mini App, otherwise use injected for browser
+      const farcaster = config.connectors[0];
+      const injected = config.connectors.find((c) => c.id === 'injected') ?? config.connectors[1] ?? farcaster;
+      const connector = isMiniApp ? farcaster : injected;
+
       await connectAsync({
         chainId: base.id,
-        connector: config.connectors[0],
+        connector,
       });
     }
 
