@@ -79,6 +79,7 @@ function CoinbaseWalletAutoConnect({ children }: { children: React.ReactNode }) 
 }
 
 export default function Provider({ children }: { children: React.ReactNode }) {
+  console.log('Using CDP API Key:', NEXT_PUBLIC_CDP_API_KEY ? 'Key Found' : 'Key Not Found');
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
