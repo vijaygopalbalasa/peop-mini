@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import { useAccount, useConnect, useSignMessage } from "wagmi";
 import { base } from "wagmi/chains";
 import { Button } from "../Button";
-import { config } from "../../providers/WagmiProvider";
+// Do not import config; use connectors from useConnect() to avoid SSR/export issues
 import { APP_NAME } from "../../../lib/constants";
 import { renderError } from "../../../lib/errorUtils";
 
@@ -29,7 +29,7 @@ import { renderError } from "../../../lib/errorUtils";
 export function SignEvmMessage() {
   // --- Hooks ---
   const { isConnected } = useAccount();
-  const { connectAsync } = useConnect();
+  const { connectAsync, connectors } = useConnect();
   const {
     signMessage,
     data: evmMessageSignature,
@@ -52,9 +52,8 @@ export function SignEvmMessage() {
   const signEvmMessage = useCallback(async () => {
     if (!isConnected) {
       const isMiniApp = typeof window !== 'undefined' && typeof (window as any).farcaster !== 'undefined';
-      // Prefer Farcaster connector in Mini App, otherwise use injected for browser
-      const farcaster = config.connectors[0];
-      const injected = config.connectors.find((c) => c.id === 'injected') ?? config.connectors[1] ?? farcaster;
+      const farcaster = connectors.find((c) => c.id === 'farcasterMiniApp') ?? connectors[0];
+      const injected = connectors.find((c) => c.id === 'injected') ?? connectors.find((c) => c.name.toLowerCase().includes('injected')) ?? farcaster;
       const connector = isMiniApp ? farcaster : injected;
 
       await connectAsync({
@@ -64,7 +63,7 @@ export function SignEvmMessage() {
     }
 
     signMessage({ message: `Hello from ${APP_NAME}!` });
-  }, [connectAsync, isConnected, signMessage]);
+  }, [connectAsync, connectors, isConnected, signMessage]);
 
   // --- Render ---
   return (

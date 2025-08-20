@@ -1,7 +1,5 @@
 'use client';
 
-'use client';
-
 import { MiniAppProvider } from '@neynar/react';
 import { SafeFarcasterSolanaProvider } from '~/components/providers/SafeFarcasterSolanaProvider';
 import WagmiProvider from '~/components/providers/WagmiProvider';
@@ -42,18 +40,26 @@ export function Providers({
 }) {
   const solanaEndpoint =
     process.env.SOLANA_RPC_ENDPOINT || 'https://solana-rpc.publicnode.com';
+  const isMiniApp =
+    typeof window !== 'undefined' && typeof (window as any).farcaster !== 'undefined';
   return (
     <WagmiProvider>
-      <MiniAppProvider
-        analyticsEnabled={ANALYTICS_ENABLED}
-        backButtonEnabled={true}
-        returnUrl={RETURN_URL}
-      >
-        <MiniAppReady />
+      {isMiniApp ? (
+        <MiniAppProvider
+          analyticsEnabled={ANALYTICS_ENABLED}
+          backButtonEnabled={true}
+          returnUrl={RETURN_URL}
+        >
+          <MiniAppReady />
+          <SafeFarcasterSolanaProvider endpoint={solanaEndpoint}>
+            {children}
+          </SafeFarcasterSolanaProvider>
+        </MiniAppProvider>
+      ) : (
         <SafeFarcasterSolanaProvider endpoint={solanaEndpoint}>
           {children}
         </SafeFarcasterSolanaProvider>
-      </MiniAppProvider>
+      )}
     </WagmiProvider>
   );
 }

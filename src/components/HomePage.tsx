@@ -11,7 +11,7 @@ import Hero from '~/components/Hero';
 import Footer from '~/components/Footer';
 import { Toaster } from 'react-hot-toast';
 
-export default function HomePage() {
+function MiniAppHome() {
   const { isSDKLoaded } = useMiniApp();
   const { address } = useAccount();
   const [mounted, setMounted] = useState(false);
@@ -20,29 +20,21 @@ export default function HomePage() {
     setMounted(true);
   }, []);
 
-  // Ensure Mini App host marks the app as ready when SDK is loaded
   useEffect(() => {
     if (!isSDKLoaded) return;
     let cancelled = false;
-
     const markReady = async () => {
       try {
-        await sdk.context; // ensure context resolves
-        if (!cancelled) {
-          await sdk.actions.ready();
-        }
-      } catch (e) {
-        // minimal retry once after a short delay
+        await sdk.context;
+        if (!cancelled) await sdk.actions.ready();
+      } catch {
         setTimeout(async () => {
           try {
-            if (!cancelled) {
-              await sdk.actions.ready();
-            }
+            if (!cancelled) await sdk.actions.ready();
           } catch {}
         }, 300);
       }
     };
-
     markReady();
     return () => {
       cancelled = true;
@@ -61,6 +53,17 @@ export default function HomePage() {
   }
 
   return (
+    <MainContent addressConnected={!!address} />
+  );
+}
+
+function BrowserHome() {
+  const { address } = useAccount();
+  return <MainContent addressConnected={!!address} />;
+}
+
+function MainContent({ addressConnected }: { addressConnected: boolean }) {
+  return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 bg-white text-gray-900 dark:bg-neutral-900 dark:text-gray-100">
       <Toaster />
       <div className="container-wide w-full">
@@ -70,26 +73,42 @@ export default function HomePage() {
           </h1>
           <p className="text-gray-700 dark:text-gray-300">Your onchain identity, secured by ZK proofs</p>
         </div>
-        
         <Hero />
-        
         <div className="mt-6">
-          {address ? (
+          {addressConnected ? (
             <PassportManager />
           ) : (
-            <WalletWrapper
-              className="w-full"
-              text="Connect Wallet to Continue"
-            />
+            <WalletWrapper className="w-full" text="Connect Wallet to Continue" />
           )}
         </div>
-        
         <div className="mt-8">
           <TrustScoreChecker />
         </div>
-        
         <Footer />
       </div>
     </main>
   );
+}
+
+export default function HomePage() {
+  const [isMiniApp, setIsMiniApp] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    setIsMiniApp(
+      typeof window !== 'undefined' && typeof (window as any).farcaster !== 'undefined'
+    );
+  }, []);
+
+  if (isMiniApp === null) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white text-gray-900 dark:bg-neutral-900 dark:text-gray-100">
+        <div className="text-center">
+          <div className="text-4xl mb-4">🪐</div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return isMiniApp ? <MiniAppHome /> : <BrowserHome />;
 }
