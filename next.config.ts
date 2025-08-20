@@ -1,16 +1,24 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  webpack: (config) => {
+    config.resolve = config.resolve || {};
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      '@farcaster/frame-sdk': require.resolve('@farcaster/miniapp-sdk'),
+    };
+    return config;
+  },
   async headers() {
     return [
       {
-        source: "/:path*",
+        source: '/:path*',
         headers: [
           {
-            key: "Content-Security-Policy",
+            key: 'Content-Security-Policy',
             // Allow embedding by Farcaster clients, including Warpcast and the dev tools.
             value:
-              "frame-ancestors 'self' https://warpcast.com https://*.warpcast.com https://*.farcaster.xyz http://localhost:*"
+              "frame-ancestors 'self' https://warpcast.com https://*.warpcast.com https://*.farcaster.xyz http://localhost:*",
           },
         ],
       },
