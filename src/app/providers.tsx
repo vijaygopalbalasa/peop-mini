@@ -1,5 +1,7 @@
 'use client';
 
+'use client';
+
 import { MiniAppProvider } from '@neynar/react';
 import { SafeFarcasterSolanaProvider } from '~/components/providers/SafeFarcasterSolanaProvider';
 import WagmiProvider from '~/components/providers/WagmiProvider';

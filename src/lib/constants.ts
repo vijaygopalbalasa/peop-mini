@@ -101,6 +101,9 @@ export const APP_WEBHOOK_URL = NEYNAR_WEBHOOK_URL;
 export const NEYNAR_REDIRECT_URL = `${APP_URL}/api/auth/callback`;
 export const NEYNAR_SIWN_VARIANT = "neynar_modal";
 
+// Public Coinbase Developer Platform API key for OnchainKit (client-exposed)
+export const NEXT_PUBLIC_CDP_API_KEY: string = process.env.NEXT_PUBLIC_CDP_API_KEY || '';
+
 export const BASE_CHAIN_ID = 8453;
 export const BASE_SEPOLIA_CHAIN_ID = 84532;
 
