@@ -8,7 +8,7 @@ import { base, baseSepolia } from 'wagmi/chains';
 import { NEXT_PUBLIC_CDP_API_KEY } from '~/lib/constants';
 
 // Per Farcaster docs, only the Farcaster connector is needed.
-const config = createConfig({
+export const config = createConfig({
   chains: [base, baseSepolia],
   connectors: [farcasterMiniApp()],
   multiInjectedProviderDiscovery: false,
