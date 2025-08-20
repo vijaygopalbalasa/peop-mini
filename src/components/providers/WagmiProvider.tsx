@@ -1,9 +1,11 @@
 import { createConfig, http, WagmiProvider } from "wagmi";
-import { base, degen, mainnet, optimism, unichain, celo } from "wagmi/chains";
+import { base, baseSepolia, degen, mainnet, optimism, unichain, celo } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { farcasterFrame } from "@farcaster/miniapp-wagmi-connector";
 import { coinbaseWallet, metaMask } from 'wagmi/connectors';
+import { OnchainKitProvider } from '@coinbase/onchainkit';
 import { APP_NAME, APP_ICON_URL, APP_URL } from "~/lib/constants";
+import { NEXT_PUBLIC_CDP_API_KEY } from "~/lib/config";
 import { useEffect, useState } from "react";
 import { useConnect, useAccount } from "wagmi";
 import React from "react";
@@ -42,9 +44,10 @@ function useCoinbaseWalletAutoConnect() {
 }
 
 export const config = createConfig({
-  chains: [base, optimism, mainnet, degen, unichain, celo],
+  chains: [base, baseSepolia, optimism, mainnet, degen, unichain, celo],
   transports: {
     [base.id]: http(),
+    [baseSepolia.id]: http(process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL),
     [optimism.id]: http(),
     [mainnet.id]: http(),
     [degen.id]: http(),
@@ -79,9 +82,14 @@ export default function Provider({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <CoinbaseWalletAutoConnect>
-          {children}
-        </CoinbaseWalletAutoConnect>
+        <OnchainKitProvider 
+          apiKey={NEXT_PUBLIC_CDP_API_KEY} 
+          chain={process.env.NODE_ENV === 'production' ? base : baseSepolia}
+        >
+          <CoinbaseWalletAutoConnect>
+            {children}
+          </CoinbaseWalletAutoConnect>
+        </OnchainKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );

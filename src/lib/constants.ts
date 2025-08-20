@@ -90,10 +90,82 @@ export const APP_BUTTON_TEXT: string = 'Launch';
  * Neynar webhook endpoint. Otherwise, falls back to a local webhook
  * endpoint for development and testing.
  */
-export const APP_WEBHOOK_URL: string =
-  process.env.NEYNAR_API_KEY && process.env.NEYNAR_CLIENT_ID
-    ? `https://api.neynar.com/f/app/${process.env.NEYNAR_CLIENT_ID}/event`
-    : `${APP_URL}/api/webhook`;
+export const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY || "NEYNAR_API_DOCS";
+export const NEYNAR_CLIENT_ID = process.env.NEYNAR_CLIENT_ID || "";
+export const NEYNAR_WEBHOOK_SECRET = process.env.NEYNAR_WEBHOOK_SECRET || "";
+export const NEYNAR_MANAGED_SIGNER_UUID = process.env.NEYNAR_MANAGED_SIGNER_UUID || "";
+export const NEYNAR_MANAGED_SIGNER_PRIVATE_KEY = process.env.NEYNAR_MANAGED_SIGNER_PRIVATE_KEY || "";
+export const NEYNAR_BOT_FID = process.env.NEYNAR_BOT_FID || "";
+export const NEYNAR_WEBHOOK_URL = `${APP_URL}/api/webhook`;
+export const APP_WEBHOOK_URL = NEYNAR_WEBHOOK_URL;
+export const NEYNAR_REDIRECT_URL = `${APP_URL}/api/auth/callback`;
+export const NEYNAR_SIWN_VARIANT = "neynar_modal";
+
+export const BASE_CHAIN_ID = 8453;
+export const BASE_SEPOLIA_CHAIN_ID = 84532;
+
+export const POEP_CONTRACT_ABI = [
+    {
+        "inputs": [
+            { "internalType": "uint256[2]", "name": "_pA", "type": "uint256[2]" },
+            { "internalType": "uint256[2][2]", "name": "_pB", "type": "uint256[2][2]" },
+            { "internalType": "uint256[2]", "name": "_pC", "type": "uint256[2]" },
+            { "internalType": "uint256", "name": "_nullifier", "type": "uint256" }
+        ],
+        "name": "mint",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [{ "internalType": "address", "name": "user", "type": "address" }],
+        "name": "viewTrustScore",
+        "outputs": [{ "internalType": "uint256", "name": "score", "type": "uint256" }],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [{ "internalType": "uint256", "name": "tokenId", "type": "uint256" }],
+        "name": "ownerOf",
+        "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [{ "internalType": "uint256", "name": "tokenId", "type": "uint256" }],
+        "name": "tokenURI",
+        "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [{ "internalType": "address", "name": "owner", "type": "address" }],
+        "name": "balanceOf",
+        "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            { "indexed": true, "internalType": "address", "name": "user", "type": "address" },
+            { "indexed": true, "internalType": "uint256", "name": "tokenId", "type": "uint256" },
+            { "indexed": false, "internalType": "uint256", "name": "nullifier", "type": "uint256" }
+        ],
+        "name": "PassportMinted",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            { "indexed": true, "internalType": "address", "name": "user", "type": "address" },
+            { "indexed": false, "internalType": "uint256", "name": "oldScore", "type": "uint256" },
+            { "indexed": false, "internalType": "uint256", "name": "newScore", "type": "uint256" }
+        ],
+        "name": "ScoreUpdated",
+        "type": "event"
+    }
+] as const;
 
 /**
  * Flag to enable/disable wallet functionality.
@@ -111,7 +183,7 @@ export const USE_WALLET: boolean = true;
  * When false, analytics collection is disabled.
  * Useful for privacy-conscious users or development environments.
  */
-export const ANALYTICS_ENABLED: boolean = true;
+export const ANALYTICS_ENABLED: boolean = false;
 
 /**
  * Required chains for the mini app.

@@ -1,16 +1,37 @@
 'use client';
 
-import dynamic from 'next/dynamic';
 import { MiniAppProvider } from '@neynar/react';
 import { SafeFarcasterSolanaProvider } from '~/components/providers/SafeFarcasterSolanaProvider';
+import WagmiProvider from '~/components/providers/WagmiProvider';
 import { ANALYTICS_ENABLED, RETURN_URL } from '~/lib/constants';
+import { useEffect } from 'react';
+import { useMiniApp } from '@neynar/react';
+import { sdk } from '@farcaster/miniapp-sdk';
 
-const WagmiProvider = dynamic(
-  () => import('~/components/providers/WagmiProvider'),
-  {
-    ssr: false,
-  }
-);
+function MiniAppReady() {
+  const { isSDKLoaded } = useMiniApp();
+  useEffect(() => {
+    if (!isSDKLoaded) return;
+    let cancelled = false;
+    const run = async () => {
+      try {
+        await sdk.context;
+        if (!cancelled) await sdk.actions.ready();
+      } catch {
+        setTimeout(async () => {
+          try {
+            if (!cancelled) await sdk.actions.ready();
+          } catch {}
+        }, 300);
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [isSDKLoaded]);
+  return null;
+}
 
 export function Providers({
   children,
@@ -26,6 +47,7 @@ export function Providers({
         backButtonEnabled={true}
         returnUrl={RETURN_URL}
       >
+        <MiniAppReady />
         <SafeFarcasterSolanaProvider endpoint={solanaEndpoint}>
           {children}
         </SafeFarcasterSolanaProvider>

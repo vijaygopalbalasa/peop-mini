@@ -45,8 +45,8 @@ export function getMiniAppEmbedMetadata(ogImageUrl?: string) {
 }
 
 export async function getFarcasterDomainManifest(): Promise<Manifest> {
-  return {
-    accountAssociation: APP_ACCOUNT_ASSOCIATION!,
+  // Build manifest and only include accountAssociation if provided
+  const manifest: any = {
     miniapp: {
       version: '1',
       name: APP_NAME ?? 'Neynar Starter Kit',
@@ -59,4 +59,10 @@ export async function getFarcasterDomainManifest(): Promise<Manifest> {
       webhookUrl: APP_WEBHOOK_URL,
     },
   };
+
+  if (APP_ACCOUNT_ASSOCIATION) {
+    manifest.accountAssociation = APP_ACCOUNT_ASSOCIATION;
+  }
+
+  return manifest as Manifest;
 }

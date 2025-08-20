@@ -1,16 +1,16 @@
 import { Metadata } from "next";
-import App from "./app";
-import { APP_NAME, APP_DESCRIPTION, APP_OG_IMAGE_URL } from "~/lib/constants";
+import { APP_OG_IMAGE_URL } from "~/lib/constants";
 import { getMiniAppEmbedMetadata } from "~/lib/utils";
+import HomePage from "~/components/HomePage";
 
 export const revalidate = 300;
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: APP_NAME,
+    title: "PoEP - Proof-of-Existence Passport",
     openGraph: {
-      title: APP_NAME,
-      description: APP_DESCRIPTION,
+      title: "PoEP - Proof-of-Existence Passport",
+      description: "Your onchain identity, secured by ZK proofs",
       images: [APP_OG_IMAGE_URL],
     },
     other: {
@@ -19,6 +19,6 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function Home() {
-  return (<App />);
+export default function Page() {
+  return <HomePage />;
 }

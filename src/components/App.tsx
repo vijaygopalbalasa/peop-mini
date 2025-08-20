@@ -7,6 +7,7 @@ import { Footer } from "~/components/ui/Footer";
 import { HomeTab, ActionsTab, ContextTab, WalletTab } from "~/components/ui/tabs";
 import { USE_WALLET } from "~/lib/constants";
 import { useNeynarUser } from "../hooks/useNeynarUser";
+import { sdk } from "@farcaster/miniapp-sdk";
 
 // --- Types ---
 export enum Tab {
@@ -77,6 +78,28 @@ export default function App(
       setInitialTab(Tab.Home);
     }
   }, [isSDKLoaded, setInitialTab]);
+
+  // Ensure global ready() call from the main App as well
+  useEffect(() => {
+    if (!isSDKLoaded) return;
+    let cancelled = false;
+    const callReady = async () => {
+      try {
+        await sdk.context;
+        if (!cancelled) await sdk.actions.ready();
+      } catch {
+        setTimeout(async () => {
+          try {
+            if (!cancelled) await sdk.actions.ready();
+          } catch {}
+        }, 300);
+      }
+    };
+    callReady();
+    return () => {
+      cancelled = true;
+    };
+  }, [isSDKLoaded]);
 
   // --- Early Returns ---
   if (!isSDKLoaded) {
