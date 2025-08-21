@@ -108,6 +108,10 @@ export const NEYNAR_SIWN_VARIANT = "neynar_modal";
 // Public Coinbase Developer Platform API key for OnchainKit (client-exposed)
 export const NEXT_PUBLIC_CDP_API_KEY: string = process.env.NEXT_PUBLIC_CDP_API_KEY || '';
 
+// Reown Project ID - Get your own at https://dashboard.reown.com/
+export const NEXT_PUBLIC_REOWN_PROJECT_ID: string =
+  process.env.NEXT_PUBLIC_REOWN_PROJECT_ID || '';
+
 export const BASE_CHAIN_ID = 8453;
 export const BASE_SEPOLIA_CHAIN_ID = 84532;
 

@@ -31,7 +31,7 @@ function MiniAppHome() {
         setTimeout(async () => {
           try {
             if (!cancelled) await sdk.actions.ready();
-          } catch {}
+          } catch { }
         }, 300);
       }
     };
@@ -78,7 +78,7 @@ function MainContent({ addressConnected }: { addressConnected: boolean }) {
           {addressConnected ? (
             <PassportManager />
           ) : (
-            <WalletWrapper className="w-full" text="Connect Wallet to Continue" />
+            <WalletWrapper />
           )}
         </div>
         <div className="mt-8">
