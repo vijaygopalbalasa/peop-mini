@@ -47,6 +47,7 @@ export async function getFarcasterDomainManifest(): Promise<Manifest> {
   // Build manifest and only include accountAssociation if provided
   const manifest: any = {
     frame: withValidProperties({
+      version: '0.0.0',
       name: APP_NAME ?? 'Neynar Starter Kit',
       homeUrl: APP_URL,
       iconUrl: APP_ICON_URL,
