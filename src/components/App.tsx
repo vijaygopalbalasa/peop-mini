@@ -65,7 +65,7 @@ export default function App(
     async function init() {
       try {
         // Await the context from the SDK.
-        const appContext = await sdk.getContext();
+        const appContext = await sdk.context;
         setContext(appContext);
         // Signal ready status *after* context is successfully loaded.
         await sdk.actions.ready();
