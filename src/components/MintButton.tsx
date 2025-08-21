@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import toast from 'react-hot-toast';
 import { POEP_CONTRACT_ABI } from '~/lib/constants';
 import { POEP_CONTRACT_ADDRESS } from '~/lib/config';
@@ -10,7 +10,10 @@ import { base, baseSepolia } from 'wagmi/chains';
 
 export function MintButton({ onMintSuccess }: { onMintSuccess?: () => void }) {
   const [snarkJsState, setSnarkJsState] = useState<'loading' | 'loaded' | 'failed'>('loading');
+  const { chain } = useAccount();
   const { data: hash, writeContract, isPending: isSubmitting, error } = useWriteContract();
+
+  const explorerBaseUrl = `${chain?.blockExplorers?.default.url ?? 'https://basescan.org'}/tx/`;
 
   useEffect(() => {
     console.log('Checking for snarkjs...');
@@ -44,10 +47,6 @@ export function MintButton({ onMintSuccess }: { onMintSuccess?: () => void }) {
   }, [snarkJsState]);
 
   async function submit() {
-    const explorerBaseUrl =
-      process.env.NODE_ENV === 'production'
-        ? 'https://basescan.org/tx/'
-        : 'https://sepolia.basescan.org/tx/';
     toast.loading('Preparing transaction...', { id: 'mint-toast' });
     try {
       const { pA, pB, pC, nullifier } = await generateZKProof();
@@ -68,10 +67,6 @@ export function MintButton({ onMintSuccess }: { onMintSuccess?: () => void }) {
   });
 
   useEffect(() => {
-    const explorerBaseUrl =
-      process.env.NODE_ENV === 'production'
-        ? 'https://basescan.org/tx/'
-        : 'https://sepolia.basescan.org/tx/';
         
     if (hash) {
       toast.loading(
@@ -104,7 +99,7 @@ export function MintButton({ onMintSuccess }: { onMintSuccess?: () => void }) {
     if (error) {
       toast.error(<b>Error: {error.message}</b>, { id: 'mint-toast' });
     }
-  }, [hash, isConfirming, isConfirmed, error, onMintSuccess]);
+  }, [hash, isConfirming, isConfirmed, error, onMintSuccess, explorerBaseUrl]);
 
   return (
     <div className="mt-4">
