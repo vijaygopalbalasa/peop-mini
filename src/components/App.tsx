@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import sdk from '@farcaster/miniapp-sdk';
+import { useState } from "react";
+import { useMiniApp } from '@neynar/react';
 import { Header } from '~/components/ui/Header';
 import { Footer } from '~/components/ui/Footer';
 import { HomeTab, ActionsTab, ContextTab, WalletTab } from '~/components/ui/tabs';
@@ -53,33 +53,11 @@ export default function App(
 ) {
   // --- Hooks ---
   const [currentTab, setActiveTab] = useState<Tab>(Tab.Home);
-  const [context, setContext] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { context, isSDKLoaded } = useMiniApp();
+  const isLoading = !isSDKLoaded;
 
   // --- Neynar user hook ---
   const user = context?.user;
-
-  // --- Effects ---
-    useEffect(() => {
-    async function init() {
-      try {
-        // Await the context from the SDK.
-        const appContext = await sdk.context;
-        setContext(appContext);
-        // Signal ready status *after* context is successfully loaded.
-        await sdk.actions.ready();
-      } catch (e: any) {
-        console.error('Failed to initialize Farcaster SDK', e);
-        setError('Error: Could not initialize Farcaster SDK.');
-        // As a fallback, still call ready() to unblock the splash screen.
-        sdk.actions.ready().catch(console.error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    init();
-  }, []);
 
   // --- Early Returns ---
   if (isLoading) {
@@ -93,13 +71,6 @@ export default function App(
     );
   }
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center text-red-500">{error}</div>
-      </div>
-    );
-  }
 
   // --- Render ---
   return (
