@@ -58,6 +58,9 @@ export async function getFarcasterDomainManifest(): Promise<Manifest> {
       splashBackgroundColor: APP_SPLASH_BACKGROUND_COLOR,
       webhookUrl: APP_WEBHOOK_URL,
     },
+    baseBuilder: {
+      allowedAddresses: ['0xB348370a74fed9e5C86a45681b01941121246381'],
+    },
   };
 
   if (APP_ACCOUNT_ASSOCIATION) {

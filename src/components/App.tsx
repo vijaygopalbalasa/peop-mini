@@ -1,13 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
-import { useMiniApp } from "@neynar/react";
-import { Header } from "~/components/ui/Header";
-import { Footer } from "~/components/ui/Footer";
-import { HomeTab, ActionsTab, ContextTab, WalletTab } from "~/components/ui/tabs";
-import { USE_WALLET } from "~/lib/constants";
-import { useNeynarUser } from "../hooks/useNeynarUser";
-import { sdk } from "@farcaster/miniapp-sdk";
+import { useEffect, useState } from "react";
+import sdk from '@farcaster/miniapp-sdk';
+import { Header } from '~/components/ui/Header';
+import { Footer } from '~/components/ui/Footer';
+import { HomeTab, ActionsTab, ContextTab, WalletTab } from '~/components/ui/tabs';
+import { USE_WALLET } from '~/lib/constants';
 
 // --- Types ---
 export enum Tab {
@@ -54,69 +52,47 @@ export default function App(
   { title }: AppProps = { title: "Neynar Starter Kit" }
 ) {
   // --- Hooks ---
-  const {
-    isSDKLoaded,
-    context,
-    setInitialTab,
-    setActiveTab,
-    currentTab,
-  } = useMiniApp();
+  const [currentTab, setActiveTab] = useState<Tab>(Tab.Home);
+  const [context, setContext] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // --- Neynar user hook ---
-  const { user: neynarUser } = useNeynarUser(context || undefined);
+  const user = context?.user;
 
   // --- Effects ---
-  /**
-   * Sets the initial tab to "home" when the SDK is loaded.
-   * 
-   * This effect ensures that users start on the home tab when they first
-   * load the mini app. It only runs when the SDK is fully loaded to
-   * prevent errors during initialization.
-   */
   useEffect(() => {
-    if (isSDKLoaded) {
-      setInitialTab(Tab.Home);
-    }
-  }, [isSDKLoaded, setInitialTab]);
-
-  // Ensure global ready() call from the main App as well
-  useEffect(() => {
-    if (!isSDKLoaded) return;
-    let cancelled = false;
-    const callReady = async () => {
+    async function init() {
       try {
-        await sdk.context;
-        if (!cancelled) {
-          await sdk.actions.ready();
-        }
-      } catch (e) {
-        console.error('Farcaster SDK: Error in initial ready() call, will retry.', e);
-        // Retry after a short delay
-        setTimeout(async () => {
-          try {
-            if (!cancelled) {
-              await sdk.actions.ready();
-            }
-          } catch (e2) {
-            console.error('Farcaster SDK: Error on retry ready() call.', e2);
-          }
-        }, 300);
+        // sdk.context is a property, not a method
+        setContext(sdk.context);
+        await sdk.actions.ready();
+      } catch (e: any) {
+        console.error('Failed to initialize Farcaster SDK', e);
+        setError('Error: Could not initialize Farcaster SDK.');
+      } finally {
+        setIsLoading(false);
       }
-    };
-    callReady();
-    return () => {
-      cancelled = true;
-    };
-  }, [isSDKLoaded]);
+    }
+    init();
+  }, []);
 
   // --- Early Returns ---
-  if (!isSDKLoaded) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
           <div className="spinner h-8 w-8 mx-auto mb-4"></div>
-          <p>Loading SDK...</p>
+          <p>Initializing Mini App...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center text-red-500">{error}</div>
       </div>
     );
   }
@@ -132,7 +108,7 @@ export default function App(
       }}
     >
       {/* Header should be full width */}
-      <Header neynarUser={neynarUser} />
+      <Header user={user} />
 
       {/* Main content and footer should be centered */}
       <div className="container py-2 pb-20">
