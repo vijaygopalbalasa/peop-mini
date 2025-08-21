@@ -72,8 +72,12 @@ export const APP_SPLASH_BACKGROUND_COLOR: string = '#f7f7f7';
  * Used to associate the mini app with a Farcaster account.
  * If not provided, the mini app will be unsigned and have limited capabilities.
  */
+const accountAssociationJson = process.env.APP_ACCOUNT_ASSOCIATION_JSON;
+
 export const APP_ACCOUNT_ASSOCIATION: AccountAssociation | undefined =
-  undefined;
+  accountAssociationJson
+    ? JSON.parse(accountAssociationJson)
+    : undefined;
 
 // --- UI Configuration ---
 /**
