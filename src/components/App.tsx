@@ -61,15 +61,19 @@ export default function App(
   const user = context?.user;
 
   // --- Effects ---
-  useEffect(() => {
+    useEffect(() => {
     async function init() {
       try {
-        // sdk.context is a property, not a method
-        setContext(sdk.context);
+        // Await the context from the SDK.
+        const appContext = await sdk.getContext();
+        setContext(appContext);
+        // Signal ready status *after* context is successfully loaded.
         await sdk.actions.ready();
       } catch (e: any) {
         console.error('Failed to initialize Farcaster SDK', e);
         setError('Error: Could not initialize Farcaster SDK.');
+        // As a fallback, still call ready() to unblock the splash screen.
+        sdk.actions.ready().catch(console.error);
       } finally {
         setIsLoading(false);
       }
