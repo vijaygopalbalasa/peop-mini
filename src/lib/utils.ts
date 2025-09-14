@@ -44,27 +44,33 @@ function withValidProperties(properties: Record<string, undefined | string | str
 }
 
 export async function getFarcasterDomainManifest(): Promise<Manifest> {
-  // Build manifest and only include accountAssociation if provided
+  // Build manifest according to 2025 Farcaster Mini App spec
   const manifest: any = {
-    frame: withValidProperties({
-      version: '0.0.0',
-      name: APP_NAME ?? 'Neynar Starter Kit',
+    miniapp: withValidProperties({
+      version: '1',
+      name: APP_NAME ?? 'PoEP - Proof-of-Existence Passport',
       homeUrl: APP_URL,
       iconUrl: APP_ICON_URL,
       imageUrl: APP_OG_IMAGE_URL,
-      buttonTitle: APP_BUTTON_TEXT ?? 'Launch Mini App',
+      buttonTitle: APP_BUTTON_TEXT ?? 'Launch',
       splashImageUrl: APP_SPLASH_URL,
       splashBackgroundColor: APP_SPLASH_BACKGROUND_COLOR,
       webhookUrl: APP_WEBHOOK_URL,
-      // The following are not in the original code but are in the docs, so I'm adding them from constants
-      description: APP_DESCRIPTION,
-      primaryCategory: APP_PRIMARY_CATEGORY,
-      tags: APP_TAGS,
-      heroImageUrl: APP_OG_IMAGE_URL, // Using OG image as hero
-      ogTitle: APP_NAME,
-      ogDescription: APP_DESCRIPTION,
-      ogImageUrl: APP_OG_IMAGE_URL,
-      noindex: process.env.NODE_ENV !== 'production',
+      description: APP_DESCRIPTION || 'Your onchain identity, secured by ZK proofs',
+      subtitle: 'Privacy-first identity for Base',
+      primaryCategory: APP_PRIMARY_CATEGORY || 'utility',
+      tags: APP_TAGS?.length > 0 ? APP_TAGS : ['identity', 'zk', 'passport', 'base'],
+      heroImageUrl: APP_OG_IMAGE_URL,
+      requiredChains: ['eip155:8453'], // Base mainnet
+      requiredCapabilities: [
+        'actions.signIn',
+        'wallet.getEthereumProvider',
+        'actions.connectWallet'
+      ],
+      // Screenshot URLs for better discovery
+      screenshotUrls: [`${APP_URL}/screenshot.png`],
+      // Canonical domain for verification
+      canonicalDomain: APP_URL?.replace('https://', '').replace('http://', ''),
     }),
     baseBuilder: {
       allowedAddresses: ['0xB348370a74fed9e5C86a45681b01941121246381'],

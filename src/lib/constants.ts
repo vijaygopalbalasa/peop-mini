@@ -22,25 +22,25 @@ export const APP_URL: string = process.env.NEXT_PUBLIC_URL!;
  * The name of the mini app as displayed to users.
  * Used in titles, headers, and app store listings.
  */
-export const APP_NAME: string = 'peop-mini';
+export const APP_NAME: string = 'PoEP - Proof-of-Existence Passport';
 
 /**
  * A brief description of the mini app's functionality.
  * Used in app store listings and metadata.
  */
-export const APP_DESCRIPTION: string = 'proof of existence passport';
+export const APP_DESCRIPTION: string = 'Your onchain identity, secured by ZK proofs';
 
 /**
  * The primary category for the mini app.
  * Used for app store categorization and discovery.
  */
-export const APP_PRIMARY_CATEGORY: string = '';
+export const APP_PRIMARY_CATEGORY: string = 'utility';
 
 /**
  * Tags associated with the mini app.
  * Used for search and discovery in app stores.
  */
-export const APP_TAGS: string[] = ['neynar', 'starter-kit', 'demo'];
+export const APP_TAGS: string[] = ['identity', 'zk', 'passport', 'base', 'onchain'];
 
 // --- Asset URLs ---
 /**
@@ -206,7 +206,7 @@ export const ANALYTICS_ENABLED: boolean = false;
  * Supported chains: eip155:1, eip155:137, eip155:42161, eip155:10, eip155:8453,
  * solana:mainnet, solana:devnet
  */
-export const APP_REQUIRED_CHAINS: string[] = [];
+export const APP_REQUIRED_CHAINS: string[] = ['eip155:8453']; // Base mainnet
 
 /**
  * Return URL for the mini app.

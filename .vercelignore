@@ -1,0 +1,41 @@
+# Large directories that shouldn't be deployed
+circuits/
+contracts/
+indexer/
+ipfs/
+
+# ZK circuit build files (too large for serverless)
+circuits/build/
+circuits/node_modules/
+
+# Development files
+.env.local
+.env.example
+*.log
+.DS_Store
+*.tsbuildinfo
+
+# Test files
+test/
+tests/
+__tests__/
+
+# Documentation
+*.md
+LICENSE
+
+# Git
+.git/
+.github/
+
+# Large dependencies
+node_modules/@nomicfoundation/
+node_modules/hardhat/
+node_modules/circom/
+node_modules/circomlib/
+node_modules/@openzeppelin/
+
+# Backup files
+*.bak
+*.backup
+*.old
