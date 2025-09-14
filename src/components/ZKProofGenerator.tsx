@@ -147,7 +147,7 @@ export default function ZKProofGenerator({
 
       onProofGenerated(mockProof, nullifier);
 
-    } catch (error) {
+    } catch (_error) {
       onError('Failed to generate proof. Please try again.');
     } finally {
       setIsGenerating(false);

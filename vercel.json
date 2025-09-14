@@ -1,13 +1,10 @@
 {
-  "buildCommand": "next build",
   "framework": "nextjs",
   "functions": {
     "src/app/api/**/*.ts": {
-      "maxDuration": 30
+      "maxDuration": 10
     }
   },
-  "regions": ["cle1", "iad1"],
   "outputDirectory": ".next",
-  "installCommand": "npm install --production=false",
-  "buildCommand": "npm run build"
+  "installCommand": "npm install --legacy-peer-deps"
 } 

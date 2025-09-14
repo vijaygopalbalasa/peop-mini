@@ -35,7 +35,7 @@ export default function BiometricCapture({ onCaptureComplete, onError }: Biometr
         videoRef.current.srcObject = stream;
         setIsCameraActive(true);
       }
-    } catch (error) {
+    } catch (_error) {
       onError('Failed to access camera. Please allow camera permissions.');
     }
   }, [onError]);
