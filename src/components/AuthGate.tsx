@@ -62,7 +62,7 @@ export function AuthGate({ children, requireAuth = false, fallback }: AuthGatePr
         <p className="text-muted-foreground mb-4">
           You need to sign in to access this feature
         </p>
-        <Button variant="default" onClick={signIn}>
+        <Button variant="default" onClick={() => signIn()}>
           Sign In
         </Button>
         {fallback && (
