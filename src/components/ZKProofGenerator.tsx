@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { Button } from './ui/button';
+import { Button } from './ui/Button';
 
 interface ZKProofGeneratorProps {
   faceHash: string;

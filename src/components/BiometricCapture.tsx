@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useCallback, useState, useEffect } from 'react';
-import { Button } from './ui/button';
+import { Button } from './ui/Button';
 
 interface BiometricCaptureProps {
   onCaptureComplete: (faceHash: string, nonce: string) => void;
