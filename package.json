@@ -61,6 +61,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/snarkjs": "^0.7.9",
     "@vercel/sdk": "^1.9.0",
     "circom": "^0.5.46",
     "circomlib": "^2.0.5",
