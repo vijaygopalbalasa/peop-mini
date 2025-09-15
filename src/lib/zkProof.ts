@@ -118,8 +118,8 @@ export async function generateZKProof(faceHash: string): Promise<ZKProofResult> 
         nullifier: simulatedNullifier
       };
     }
-  } catch (error) {
-    console.error('ZK proof generation failed:', error);
+  } catch (_error) {
+    console.error('ZK proof generation failed:', _error);
     throw new Error('Failed to generate ZK proof');
   }
 }

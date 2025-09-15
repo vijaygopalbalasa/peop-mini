@@ -31,10 +31,10 @@ enum PoEPStep {
 
 export function HomeTab() {
   const [currentStep, setCurrentStep] = useState<PoEPStep>(PoEPStep.Welcome);
-  const [isCapturing, setIsCapturing] = useState(false);
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [_isCapturing, _setIsCapturing] = useState(false);
+  const [_capturedImage, setCapturedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [zkProof, setZkProof] = useState<ZKProofResult | null>(null);
+  const [_zkProof, setZkProof] = useState<ZKProofResult | null>(null);
   const [userTrustScore, setUserTrustScore] = useState<number>(0);
   const [hasExistingPassport, setHasExistingPassport] = useState<boolean>(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -127,15 +127,15 @@ export function HomeTab() {
       await mintPoEPNFT(proof);
 
       setCurrentStep(PoEPStep.Success);
-    } catch (err) {
-      console.error('Processing failed:', err);
+    } catch (_err) {
+      console.error('Processing failed:', _err);
       setError('Failed to process image or generate proof');
       setCurrentStep(PoEPStep.Error);
     }
   };
 
 
-  const mintPoEPNFT = async (proof: ZKProofResult) => {
+  const mintPoEPNFT = async (_proof: ZKProofResult) => {
     try {
       // Use the real contract ZK proof generation and minting
       const contractProof = await contractGenerateZKProof();

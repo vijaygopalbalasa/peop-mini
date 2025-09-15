@@ -1,6 +1,6 @@
 'use client';
 
-import { useMiniKit } from '@farcaster/miniapp-sdk';
+import { useMiniKit } from '@coinbase/onchainkit/minikit';
 import { useAuthenticate } from '@coinbase/onchainkit/minikit';
 import { ReactNode } from 'react';
 import { Button } from './ui/Button';

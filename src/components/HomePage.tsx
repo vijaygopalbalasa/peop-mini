@@ -1,6 +1,6 @@
 'use client';
 
-import { useMiniKit } from '@farcaster/miniapp-sdk';
+import { useMiniKit } from '@coinbase/onchainkit/minikit';
 import { useAccount } from 'wagmi';
 import { useState, useEffect } from 'react';
 import PassportManager from '~/components/PassportManager';
