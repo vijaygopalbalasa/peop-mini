@@ -2,7 +2,7 @@
 
 import { useCallback, useState, useEffect } from 'react';
 import { Button } from './Button';
-import { useMiniApp } from '@neynar/react';
+import { useMiniKit, useComposeCast } from '@coinbase/onchainkit/minikit';
 import { type ComposeCast } from "@farcaster/miniapp-sdk";
 import { APP_URL } from '~/lib/constants';
 
@@ -28,7 +28,8 @@ export function ShareButton({ buttonText, cast, className = '', isLoading = fals
   const [isProcessing, setIsProcessing] = useState(false);
   const [bestFriends, setBestFriends] = useState<{ fid: number; username: string; }[] | null>(null);
   const [isLoadingBestFriends, setIsLoadingBestFriends] = useState(false);
-  const { context, actions } = useMiniApp();
+  const { context } = useMiniKit();
+  const { composeCast } = useComposeCast();
 
   // Fetch best friends if needed
   useEffect(() => {
@@ -92,19 +93,18 @@ export function ShareButton({ buttonText, cast, className = '', isLoading = fals
       );
 
       // Open cast composer with all supported intents
-      await actions.composeCast({
+      await composeCast({
         text: finalText,
         embeds: processedEmbeds as [string] | [string, string] | undefined,
         parent: cast.parent,
         channelKey: cast.channelKey,
-        close: cast.close,
       });
     } catch (error) {
       console.error('Failed to share:', error);
     } finally {
       setIsProcessing(false);
     }
-  }, [cast, bestFriends, context?.user?.fid, actions]);
+  }, [cast, bestFriends, context?.user?.fid, composeCast]);
 
   return (
     <Button

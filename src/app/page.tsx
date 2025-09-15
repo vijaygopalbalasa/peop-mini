@@ -8,6 +8,7 @@ export const revalidate = 300;
 export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "PoEP - Proof-of-Existence Passport",
+    description: "Your onchain identity, secured by ZK proofs",
     openGraph: {
       title: "PoEP - Proof-of-Existence Passport",
       description: "Your onchain identity, secured by ZK proofs",
@@ -15,7 +16,6 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     other: {
       "fc:frame": JSON.stringify(getMiniAppEmbedMetadata()),
-      "fc:miniapp": JSON.stringify(getMiniAppEmbedMetadata()),
     },
   };
 }

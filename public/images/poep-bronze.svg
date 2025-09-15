@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <defs>
+    <linearGradient id="bronzeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fef3c7;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#cd7f32;stop-opacity:0.2" />
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" fill="url(#bronzeGrad)" />
+
+  <!-- Border -->
+  <rect x="4" y="4" width="504" height="504" stroke="#cd7f32" stroke-width="8" fill="none" />
+
+  <!-- Main circle -->
+  <circle cx="256" cy="216" r="120" fill="#cd7f32" />
+
+  <!-- Inner circle -->
+  <circle cx="256" cy="216" r="80" fill="white" />
+
+  <!-- ZK Text -->
+  <text x="256" y="235" font-family="Arial, sans-serif" font-size="48" font-weight="bold"
+        text-anchor="middle" fill="#cd7f32">ZK</text>
+
+  <!-- Tier name -->
+  <text x="256" y="336" font-family="Arial, sans-serif" font-size="36" font-weight="bold"
+        text-anchor="middle" fill="#cd7f32">Bronze</text>
+
+  <!-- Score range -->
+  <text x="256" y="376" font-family="Arial, sans-serif" font-size="24"
+        text-anchor="middle" fill="#4b5563">Score: 10-49</text>
+
+  <!-- Description -->
+  <text x="256" y="406" font-family="Arial, sans-serif" font-size="18"
+        text-anchor="middle" fill="#4b5563">Active participant</text>
+
+  <!-- PoEP text -->
+  <text x="256" y="482" font-family="Arial, sans-serif" font-size="20" font-weight="bold"
+        text-anchor="middle" fill="#cd7f32">Proof-of-Existence Passport</text>
+
+  <!-- Base logo -->
+  <text x="60" y="482" font-family="Arial, sans-serif" font-size="16" font-weight="bold"
+        text-anchor="middle" fill="#0052ff">⚡ Base</text>
+</svg>

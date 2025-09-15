@@ -1,65 +1,31 @@
 'use client';
 
-import { MiniAppProvider } from '@neynar/react';
-import { SafeFarcasterSolanaProvider } from '~/components/providers/SafeFarcasterSolanaProvider';
-import WagmiProvider from '~/components/providers/WagmiProvider';
-import { ANALYTICS_ENABLED, RETURN_URL } from '~/lib/constants';
-import { useEffect } from 'react';
-import { useMiniApp } from '@neynar/react';
-import { sdk } from '@farcaster/miniapp-sdk';
+import { OnchainKitProvider } from '@coinbase/onchainkit';
+import { base } from 'wagmi/chains';
+import { ReactNode } from 'react';
 
-function MiniAppReady() {
-  const { isSDKLoaded } = useMiniApp();
-  useEffect(() => {
-    if (!isSDKLoaded) return;
-    let cancelled = false;
-    const run = async () => {
-      try {
-        await sdk.context;
-        if (!cancelled) await sdk.actions.ready();
-      } catch {
-        setTimeout(async () => {
-          try {
-            if (!cancelled) await sdk.actions.ready();
-          } catch {}
-        }, 300);
-      }
-    };
-    run();
-    return () => {
-      cancelled = true;
-    };
-  }, [isSDKLoaded]);
-  return null;
-}
-
-export function Providers({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const solanaEndpoint =
-    process.env.SOLANA_RPC_ENDPOINT || 'https://solana-rpc.publicnode.com';
-  const isMiniApp =
-    typeof window !== 'undefined' && typeof (window as any).farcaster !== 'undefined';
+/**
+ * Providers for PoEP Mini App
+ *
+ * Follows the official Base Mini Apps pattern:
+ * - OnchainKitProvider for Base mainnet integration with MiniKit support
+ * - MiniKit is automatically available in Base App context
+ * - No need for additional Farcaster SDK providers
+ */
+export function Providers({ children }: { children: ReactNode }) {
   return (
-    <WagmiProvider>
-      {isMiniApp ? (
-        <MiniAppProvider
-          analyticsEnabled={ANALYTICS_ENABLED}
-          backButtonEnabled={true}
-          returnUrl={RETURN_URL}
-        >
-          <MiniAppReady />
-          <SafeFarcasterSolanaProvider endpoint={solanaEndpoint}>
-            {children}
-          </SafeFarcasterSolanaProvider>
-        </MiniAppProvider>
-      ) : (
-        <SafeFarcasterSolanaProvider endpoint={solanaEndpoint}>
-          {children}
-        </SafeFarcasterSolanaProvider>
-      )}
-    </WagmiProvider>
+    <OnchainKitProvider
+      apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
+      chain={base}
+      config={{
+        appearance: {
+          mode: 'auto',
+          theme: 'default',
+          name: 'PoEP - Proof-of-Existence Passport',
+        },
+      }}
+    >
+      {children}
+    </OnchainKitProvider>
   );
 }

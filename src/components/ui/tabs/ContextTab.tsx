@@ -1,6 +1,6 @@
 "use client";
 
-import { useMiniApp } from "@neynar/react";
+import { useMiniKit } from '@coinbase/onchainkit/minikit';
 
 /**
  * ContextTab component displays the current mini app context in JSON format.
@@ -20,7 +20,7 @@ import { useMiniApp } from "@neynar/react";
  * ```
  */
 export function ContextTab() {
-  const { context } = useMiniApp();
+  const { context } = useMiniKit();
   
   return (
     <div className="mx-6">

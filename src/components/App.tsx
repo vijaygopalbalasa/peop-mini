@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMiniApp } from '@neynar/react';
+import { useMiniKit } from '@coinbase/onchainkit/minikit';
 import { Header } from '~/components/ui/Header';
 import { Footer } from '~/components/ui/Footer';
 import { HomeTab, ActionsTab, ContextTab, WalletTab } from '~/components/ui/tabs';
@@ -49,12 +49,12 @@ export interface AppProps {
  * ```
  */
 export default function App(
-  { title }: AppProps = { title: "Neynar Starter Kit" }
+  { title }: AppProps = { title: "PoEP - Proof-of-Existence Passport" }
 ) {
   // --- Hooks ---
   const [currentTab, setActiveTab] = useState<Tab>(Tab.Home);
-  const { context, isSDKLoaded } = useMiniApp();
-  const isLoading = !isSDKLoaded;
+  const { context, isFrameReady } = useMiniKit();
+  const isLoading = !isFrameReady;
 
   // --- Neynar user hook ---
   const user = context?.user;
@@ -87,8 +87,10 @@ export default function App(
 
       {/* Main content and footer should be centered */}
       <div className="container py-2 pb-20">
-        {/* Main title */}
-        <h1 className="text-2xl font-bold text-center mb-4">{title}</h1>
+        {/* Main title - Only show if not PoEP default */}
+        {title !== "PoEP - Proof-of-Existence Passport" && (
+          <h1 className="text-2xl font-bold text-center mb-4">{title}</h1>
+        )}
 
         {/* Tab content rendering */}
         {currentTab === Tab.Home && <HomeTab />}

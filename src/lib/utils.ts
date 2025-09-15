@@ -1,6 +1,5 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Manifest } from '@farcaster/miniapp-core/src/manifest';
 import {
   APP_BUTTON_TEXT,
   APP_DESCRIPTION,
@@ -43,43 +42,38 @@ function withValidProperties(properties: Record<string, undefined | string | str
   );
 }
 
-export async function getFarcasterDomainManifest(): Promise<Manifest> {
-  // Build manifest according to 2025 Farcaster Mini App spec
+export async function getBaseMiniAppManifest() {
+  // Build manifest according to Base Mini Apps specification
   const manifest: any = {
-    miniapp: withValidProperties({
+    accountAssociation: APP_ACCOUNT_ASSOCIATION || {
+      header: "eyJmaWQiOjkxNTIsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHgwMmVmNzkwRGQ3OTkzQTM1ZkQ4NDdDMDUzRURkQUU5NDBEMDU1NTk2In0",
+      payload: "eyJkb21haW4iOiJhcHAuZXhhbXBsZS5jb20ifQ",
+      signature: "MHgxMGQwZGU4ZGYwZDUwZTdmMGIxN2YxMTU2NDI1MjRmZTY0MTUyZGU4ZGU1MWU0MThiYjU4ZjVmZmQxYjRjNDBiNGVlZTRhNDcwNmVmNjhlMzQ0ZGQ5MDBkYmQyMmNlMmVlZGY5ZGQ0N2JlNWRmNzMwYzUxNjE4OWVjZDJjY2Y0MDFj"
+    },
+    baseBuilder: {
+      allowedAddresses: ['0xB348370a74fed9e5C86a45681b01941121246381']
+    },
+    frame: withValidProperties({
       version: '1',
       name: APP_NAME ?? 'PoEP - Proof-of-Existence Passport',
       homeUrl: APP_URL,
       iconUrl: APP_ICON_URL,
-      imageUrl: APP_OG_IMAGE_URL,
-      buttonTitle: APP_BUTTON_TEXT ?? 'Launch',
       splashImageUrl: APP_SPLASH_URL,
       splashBackgroundColor: APP_SPLASH_BACKGROUND_COLOR,
       webhookUrl: APP_WEBHOOK_URL,
-      description: APP_DESCRIPTION || 'Your onchain identity, secured by ZK proofs',
-      subtitle: 'Privacy-first identity for Base',
+      subtitle: 'Privacy-first human verification',
+      description: APP_DESCRIPTION || 'Prove your humanity with ZK. Mint soul-bound NFT. Build trust score.',
+      screenshotUrls: [`${APP_URL}/screenshot.png`],
       primaryCategory: APP_PRIMARY_CATEGORY || 'utility',
       tags: APP_TAGS?.length > 0 ? APP_TAGS : ['identity', 'zk', 'passport', 'base'],
       heroImageUrl: APP_OG_IMAGE_URL,
-      requiredChains: ['eip155:8453'], // Base mainnet
-      requiredCapabilities: [
-        'actions.signIn',
-        'wallet.getEthereumProvider',
-        'actions.connectWallet'
-      ],
-      // Screenshot URLs for better discovery
-      screenshotUrls: [`${APP_URL}/screenshot.png`],
-      // Canonical domain for verification
-      canonicalDomain: APP_URL?.replace('https://', '').replace('http://', ''),
-    }),
-    baseBuilder: {
-      allowedAddresses: ['0xB348370a74fed9e5C86a45681b01941121246381'],
-    },
+      tagline: 'Prove your humanity with ZK',
+      ogTitle: APP_NAME,
+      ogDescription: APP_DESCRIPTION,
+      ogImageUrl: APP_OG_IMAGE_URL,
+      noindex: false
+    })
   };
 
-  if (APP_ACCOUNT_ASSOCIATION) {
-    manifest.accountAssociation = APP_ACCOUNT_ASSOCIATION;
-  }
-
-  return manifest as Manifest;
+  return manifest;
 }

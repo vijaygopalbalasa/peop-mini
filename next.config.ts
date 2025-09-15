@@ -4,11 +4,6 @@ const nextConfig: NextConfig = {
   webpack: (config) => {
     config.externals = config.externals || [];
     config.externals.push('pino-pretty', 'lokijs', 'encoding');
-    config.resolve = config.resolve || {};
-    config.resolve.alias = {
-      ...(config.resolve.alias || {}),
-      '@farcaster/frame-sdk': require.resolve('@farcaster/miniapp-sdk'),
-    };
     return config;
   },
   async headers() {
@@ -18,9 +13,9 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            // Allow embedding by Farcaster clients, including Warpcast and the dev tools.
+            // Allow embedding by Base Mini Apps and Farcaster clients
             value:
-              "frame-ancestors 'self' https://warpcast.com https://*.warpcast.com https://*.farcaster.xyz http://localhost:*",
+              "frame-ancestors 'self' https://warpcast.com https://*.warpcast.com https://*.farcaster.xyz https://*.base.org http://localhost:*",
           },
         ],
       },

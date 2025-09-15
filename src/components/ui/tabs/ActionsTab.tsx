@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { useMiniApp } from '@neynar/react';
+import { useMiniKit } from '@coinbase/onchainkit/minikit';
 import { ShareButton } from '../Share';
 import { Button } from '../Button';
 import { SignIn } from '../wallet/SignIn';
@@ -19,7 +19,7 @@ import { APP_URL } from '~/lib/constants';
  * - Add the mini app to their client
  * - Copy share URLs
  *
- * The component uses the useMiniApp hook to access Farcaster context and actions.
+ * The component uses the useMiniKit hook to access Farcaster context and actions.
  * All state is managed locally within this component.
  *
  * @example
@@ -30,7 +30,7 @@ import { APP_URL } from '~/lib/constants';
 export function ActionsTab() {
   // --- Hooks ---
   const { actions, added, notificationDetails, haptics, context } =
-    useMiniApp();
+    useMiniKit();
 
   // --- State ---
   const [notificationState, setNotificationState] = useState({

@@ -1,4 +1,4 @@
-import { type AccountAssociation } from '@farcaster/miniapp-core/src/manifest';
+// Account association type for Base Mini Apps
 
 /**
  * Application constants and configuration values.
@@ -69,12 +69,12 @@ export const APP_SPLASH_BACKGROUND_COLOR: string = '#f7f7f7';
 
 /**
  * Account association for the mini app.
- * Used to associate the mini app with a Farcaster account.
+ * Used to associate the mini app with a Base account.
  * If not provided, the mini app will be unsigned and have limited capabilities.
  */
 const accountAssociationJson = process.env.APP_ACCOUNT_ASSOCIATION_JSON;
 
-export const APP_ACCOUNT_ASSOCIATION: AccountAssociation | undefined =
+export const APP_ACCOUNT_ASSOCIATION: any | undefined =
   accountAssociationJson
     ? JSON.parse(accountAssociationJson)
     : undefined;
