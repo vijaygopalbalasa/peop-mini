@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import '~/app/globals.css';
-import '@coinbase/onchainkit/styles.css';
 import { Providers } from "./providers";
 import { APP_NAME, APP_DESCRIPTION, APP_OG_IMAGE_URL } from "~/lib/constants";
 
