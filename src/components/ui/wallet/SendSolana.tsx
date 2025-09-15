@@ -95,7 +95,6 @@ export function SendSolana() {
       <Button
         onClick={sendSolanaTransaction}
         disabled={solanaTransactionState.status === 'pending'}
-        isLoading={solanaTransactionState.status === 'pending'}
         className="mb-4"
       >
         Send Transaction (sol)

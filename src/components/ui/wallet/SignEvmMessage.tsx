@@ -71,7 +71,6 @@ export function SignEvmMessage() {
       <Button
         onClick={signEvmMessage}
         disabled={isEvmSignMessagePending}
-        isLoading={isEvmSignMessagePending}
       >
         Sign Message
       </Button>
