@@ -1,17 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
-import PoEPMetadataManager from '~/ipfs/metadata-manager';
 
 /**
- * Dynamic NFT Metadata API Endpoint
+ * Simple NFT Metadata API for PoEP
  *
- * This endpoint serves dynamic NFT metadata that updates based on trust scores.
- * It's designed to work with the PoEP contract's tokenURI function which
- * appends ?score=X to the metadata URL.
- *
- * Example usage:
- * GET /api/metadata?score=25 -> Returns Bronze tier metadata
- * GET /api/metadata?score=75 -> Returns Silver tier metadata
+ * Serves dynamic NFT metadata based on trust scores without external dependencies
  */
+
+function getTierFromScore(score: number): {
+  tier: string;
+  image: string;
+  color: string;
+} {
+  if (score >= 100) {
+    return {
+      tier: 'Gold',
+      image: '/images/poep-gold.svg',
+      color: 'FFD700'
+    };
+  } else if (score >= 50) {
+    return {
+      tier: 'Silver',
+      image: '/images/poep-silver.svg',
+      color: 'C0C0C0'
+    };
+  } else if (score >= 25) {
+    return {
+      tier: 'Bronze',
+      image: '/images/poep-bronze.svg',
+      color: 'CD7F32'
+    };
+  } else {
+    return {
+      tier: 'Standard',
+      image: '/images/poep-standard.svg',
+      color: '1a1b23'
+    };
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,8 +44,8 @@ export async function GET(request: NextRequest) {
     const scoreParam = searchParams.get('score');
     const tokenId = searchParams.get('tokenId');
 
-    // Parse and validate score
-    let trustScore = 1; // Default score
+    // Parse trust score
+    let trustScore = 1;
     if (scoreParam) {
       const parsedScore = parseInt(scoreParam, 10);
       if (!isNaN(parsedScore) && parsedScore >= 0) {
@@ -28,17 +53,45 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Initialize metadata manager
-    const metadataManager = new PoEPMetadataManager();
+    const { tier, image, color } = getTierFromScore(trustScore);
+    const baseUrl = process.env.NEXT_PUBLIC_URL || 'https://poep-mini.vercel.app';
 
-    // Generate dynamic metadata based on trust score
-    const metadata = metadataManager.generateMetadata(trustScore);
+    const metadata = {
+      name: `PoEP ${tier} #${tokenId || 'Unknown'}`,
+      description: `A soul-bound NFT proving unique human identity with ${trustScore} trust score. Secured by zero-knowledge proofs and tied to Base transactions.`,
+      image: `${baseUrl}${image}`,
+      external_url: baseUrl,
+      background_color: color,
+      attributes: [
+        {
+          trait_type: "Trust Score",
+          value: trustScore,
+          display_type: "number"
+        },
+        {
+          trait_type: "Tier",
+          value: tier
+        },
+        {
+          trait_type: "Type",
+          value: "Soul-bound"
+        },
+        {
+          trait_type: "Verification",
+          value: "ZK Proof"
+        },
+        {
+          trait_type: "Network",
+          value: "Base"
+        },
+        {
+          trait_type: "Privacy",
+          value: "Preserved"
+        }
+      ]
+    };
 
-    // Add additional context for better OpenSea support
-    metadata.external_url = `${process.env.NEXT_PUBLIC_URL}`;
-    metadata.animation_url = undefined; // No animation for this version
-
-    // Add tokenId to attributes if provided
+    // Add token ID if provided
     if (tokenId) {
       metadata.attributes.push({
         trait_type: "Token ID",
@@ -47,22 +100,22 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Set proper headers for NFT metadata
-    const response = NextResponse.json(metadata);
-    response.headers.set('Cache-Control', 'public, max-age=300'); // Cache for 5 minutes
-    response.headers.set('Content-Type', 'application/json');
-
-    return response;
+    return NextResponse.json(metadata, {
+      headers: {
+        'Cache-Control': 'public, max-age=300',
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      }
+    });
 
   } catch (error) {
     console.error('Metadata API error:', error);
 
-    // Return minimal fallback metadata
     const fallbackMetadata = {
       name: "PoEP - Proof-of-Existence Passport",
       description: "A soul-bound NFT that proves unique human identity using zero-knowledge proofs.",
-      image: `${process.env.NEXT_PUBLIC_URL}/images/poep-standard.svg`,
-      external_url: `${process.env.NEXT_PUBLIC_URL}`,
+      image: `${process.env.NEXT_PUBLIC_URL || 'https://poep-mini.vercel.app'}/images/poep-standard.svg`,
+      external_url: process.env.NEXT_PUBLIC_URL || 'https://poep-mini.vercel.app',
       background_color: "1a1b23",
       attributes: [
         {
@@ -78,38 +131,11 @@ export async function GET(request: NextRequest) {
     };
 
     return NextResponse.json(fallbackMetadata, {
-      status: 500,
+      status: 200, // Return 200 even for errors to avoid NFT platform issues
       headers: {
         'Cache-Control': 'no-cache',
         'Content-Type': 'application/json'
       }
     });
   }
-}
-
-/**
- * Health check endpoint
- */
-export async function HEAD(request: NextRequest) {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Cache-Control': 'public, max-age=60'
-    }
-  });
-}
-
-/**
- * Options for CORS if needed
- */
-export async function OPTIONS(request: NextRequest) {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-      'Cache-Control': 'public, max-age=86400' // 24 hours
-    }
-  });
 }
