@@ -100,7 +100,7 @@ export async function generateZKProof(faceHash: string): Promise<ZKProofResult> 
         publicSignals,
         nullifier
       };
-    } catch (error) {
+    } catch (_error) {
       console.warn('Circuit files not found, using simulated proof');
 
       // Fallback to simulated proof for demo

@@ -23,10 +23,10 @@ interface AuthGateProps {
 
 export function AuthGate({ children, requireAuth = false, fallback }: AuthGateProps) {
   const { context } = useMiniKit();
-  const { user } = useAuthenticate();
+  const { user, authenticate } = useAuthenticate();
 
   // Use context for UI hints only (can be spoofed)
-  const displayName = context?.user?.displayName ?? 'Friend';
+  const displayName = context?.user?.displayName ?? context?.user?.username ?? 'Friend';
   const pfpUrl = context?.user?.pfpUrl;
 
   // Use verified user for secure operations
@@ -61,7 +61,7 @@ export function AuthGate({ children, requireAuth = false, fallback }: AuthGatePr
         <p className="text-muted-foreground mb-4">
           You need to sign in to access this feature
         </p>
-        <Button variant="default">
+        <Button variant="default" onClick={authenticate}>
           Sign In
         </Button>
         {fallback && (

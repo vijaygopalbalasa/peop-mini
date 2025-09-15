@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import { APP_OG_IMAGE_URL } from "~/lib/constants";
 import { getMiniAppEmbedMetadata } from "~/lib/utils";
-import HomePage from "~/components/HomePage";
+import App from "~/components/App";
 
 export const revalidate = 300;
 
@@ -21,5 +21,5 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function Page() {
-  return <HomePage />;
+  return <App />;
 }

@@ -40,7 +40,14 @@ export function HomeTab() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const { context } = useMiniKit();
+  const { context, setFrameReady, isFrameReady } = useMiniKit();
+
+  // Initialize frame readiness
+  useEffect(() => {
+    if (!isFrameReady) {
+      setFrameReady();
+    }
+  }, [isFrameReady, setFrameReady]);
 
   // Check for existing passport when component mounts
   useEffect(() => {
@@ -80,7 +87,7 @@ export function HomeTab() {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
-    } catch (err) {
+    } catch (_err) {
       setError('Camera access denied. Please allow camera permissions.');
       setCurrentStep(PoEPStep.Error);
     }
