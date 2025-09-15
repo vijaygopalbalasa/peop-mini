@@ -57,8 +57,8 @@ function MiniAppHome() {
           <div className="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <h3 className="font-semibold text-blue-900 mb-2">Base App Context</h3>
             <div className="text-sm text-blue-800 space-y-1">
-              <p>Client: {context.client?.name || 'Unknown'}</p>
-              <p>Version: {context.client?.version || 'Unknown'}</p>
+              <p>Client Added: {context.client?.added ? 'Yes' : 'No'}</p>
+              <p>Client FID: {context.client?.clientFid || 'Unknown'}</p>
               {context.user && (
                 <p>User: {context.user.displayName || 'Anonymous'}</p>
               )}
