@@ -1,25 +1,28 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
-import { getNeynarUser } from "~/lib/neynar";
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const fid = searchParams.get('fid');
-
-  const user = fid ? await getNeynarUser(Number(fid)) : null;
+  const score = searchParams.get('score') || '1';
 
   return new ImageResponse(
     (
-      <div tw="flex h-full w-full flex-col justify-center items-center relative bg-primary">
-        {user?.pfp_url && (
-          <div tw="flex w-96 h-96 rounded-full overflow-hidden mb-8 border-8 border-white">
-            <img src={user.pfp_url} alt="Profile" tw="w-full h-full object-cover" />
-          </div>
-        )}
-        <h1 tw="text-8xl text-white">{user?.display_name ? `Hello from ${user.display_name ?? user.username}!` : 'Hello!'}</h1>
-        <p tw="text-5xl mt-4 text-white opacity-80">Powered by Neynar 🪐</p>
+      <div tw="flex h-full w-full flex-col justify-center items-center relative"
+           style={{
+             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+           }}>
+        <div tw="flex items-center justify-center w-64 h-64 bg-white rounded-full mb-8 shadow-2xl">
+          <div tw="text-8xl">🔐</div>
+        </div>
+        <h1 tw="text-8xl text-white font-bold text-center">PoEP</h1>
+        <p tw="text-4xl text-white opacity-90 text-center">Proof-of-Existence Passport</p>
+        <div tw="flex items-center mt-8 bg-white bg-opacity-20 rounded-full px-8 py-4">
+          <span tw="text-3xl text-white mr-4">Trust Score:</span>
+          <span tw="text-5xl text-yellow-300 font-bold">{score}</span>
+        </div>
+        <p tw="text-2xl mt-6 text-white opacity-80">Privacy-first human verification on Base</p>
       </div>
     ),
     {
