@@ -136,36 +136,53 @@ export function HomeTab() {
     setError(null);
 
     try {
+      console.log('=== STARTING POEP CREATION ===');
+      console.log('Image data length:', imageData.length);
+      console.log('Image data type:', typeof imageData);
+      console.log('Wallet address:', address);
+      console.log('Is wallet connected:', !!address);
+
       // Step 1: Convert image to face hash
       let faceHash: string;
       try {
+        console.log('Step 1: Starting face hash generation...');
         faceHash = await generateFaceHash(imageData);
+        console.log('Step 1: Face hash generated successfully:', faceHash.substring(0, 20) + '...');
       } catch (err) {
+        console.error('Step 1: Face hash generation failed:', err);
         throw new Error(`Face analysis failed: ${(err as Error).message}`);
       }
 
       // Step 2: Generate ZK proof
       let proof: ZKProofResult;
       try {
+        console.log('Step 2: Starting ZK proof generation...');
         if (!address) {
           throw new Error('Wallet address is required for ZK proof generation');
         }
         proof = await generateZKProof(faceHash, address);
+        console.log('Step 2: ZK proof generated successfully');
+        console.log('Proof structure:', Object.keys(proof));
         setZkProof(proof);
       } catch (err) {
+        console.error('Step 2: ZK proof generation failed:', err);
         throw new Error(`ZK proof generation failed: ${(err as Error).message}`);
       }
 
       // Step 3: Mint soul-bound NFT
       try {
+        console.log('Step 3: Starting NFT minting...');
         await mintPoEPNFT(proof);
+        console.log('Step 3: NFT minted successfully');
       } catch (err) {
+        console.error('Step 3: NFT minting failed:', err);
         throw new Error(`NFT minting failed: ${(err as Error).message}`);
       }
 
+      console.log('=== POEP CREATION COMPLETED SUCCESSFULLY ===');
       setCurrentStep(PoEPStep.Success);
     } catch (err: any) {
-      console.error('PoEP creation failed:', err);
+      console.error('=== POEP CREATION FAILED ===', err);
 
       let errorMessage = 'Failed to create PoEP';
       if (err.message) {
@@ -189,38 +206,63 @@ export function HomeTab() {
 
   const mintPoEPNFT = async (proof: ZKProofResult) => {
     try {
+      console.log('=== STARTING MINT PROCESS ===');
+      console.log('Received proof:', {
+        faceHash: proof.faceHash.substring(0, 20) + '...',
+        nullifier: proof.nullifier.toString().substring(0, 20) + '...',
+        nonce: proof.nonce
+      });
+
       // Generate contract-compatible ZK proof using the same face hash
       if (!address) {
         throw new Error('Wallet address is required for contract proof generation');
       }
+
+      console.log('Generating contract-compatible proof...');
       const contractProof = await contractGenerateZKProof(proof.faceHash, proof.nonce, address);
+      console.log('Contract proof generated successfully:', Object.keys(contractProof));
 
       // Validate wallet connection before minting
       if (!address) {
         throw new Error('Wallet not connected. Please connect your wallet first.');
       }
 
+      const requestPayload = {
+        proof: contractProof,
+        nullifier: proof.nullifier.toString(), // Convert BigInt to string
+        userAddress: address // Use the connected wallet address
+      };
+
+      console.log('Sending mint request to API...');
+      console.log('Request payload structure:', {
+        proof: Object.keys(contractProof),
+        nullifier: typeof requestPayload.nullifier,
+        userAddress: typeof requestPayload.userAddress
+      });
+
       // Submit the ZK proof to the PoEP smart contract on Base
       const response = await fetch('/api/mint-poep', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          proof: contractProof,
-          nullifier: proof.nullifier.toString(), // Convert BigInt to string
-          userAddress: address // Use the connected wallet address
-        })
+        body: JSON.stringify(requestPayload)
       });
 
+      console.log('API response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Minting failed');
+        const errorData = await response.text();
+        console.error('API error response:', errorData);
+        throw new Error(`Minting failed: ${response.status} - ${errorData}`);
       }
 
       const result = await response.json();
+      console.log('Mint successful:', result);
 
       // Update user state after successful mint
       setUserTrustScore(result.trustScore || 100);
       setHasExistingPassport(true);
     } catch (error) {
+      console.error('Mint function error:', error);
       throw error;
     }
   };
