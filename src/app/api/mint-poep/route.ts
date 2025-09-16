@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
 import { rateLimit } from '~/lib/rateLimit';
 
-const POEP_CONTRACT_ADDRESS = process.env.POEP_CONTRACT_ADDRESS;
-const PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY;
+const POEP_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_POEP_CONTRACT_ADDRESS;
+const PRIVATE_KEY = process.env.PRIVATE_KEY;
 const BASE_RPC_URL = process.env.BASE_RPC_URL || 'https://mainnet.base.org';
 
 // Rate limiting configuration
@@ -71,20 +71,16 @@ export async function POST(request: NextRequest) {
     const provider = new ethers.JsonRpcProvider(BASE_RPC_URL);
     const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
 
-    // Load contract ABI and connect
-    const contractABI = [
-      "function mintPoEP(address to, uint256[8] calldata proof, uint256[1] calldata publicSignals) external returns (uint256)",
-      "function hasPoEP(address user) external view returns (bool)",
-      "function getTrustScore(address user) external view returns (uint256)"
-    ];
-
-    const contract = new ethers.Contract(POEP_CONTRACT_ADDRESS, contractABI, wallet);
+    // Use the correct contract ABI from constants
+    const { POEP_CONTRACT_ABI } = await import('~/lib/constants');
+    const contract = new ethers.Contract(POEP_CONTRACT_ADDRESS, POEP_CONTRACT_ABI, wallet);
 
     // Normalize the user address
     const normalizedAddress = ethers.getAddress(userAddress);
 
-    // Check if user already has a PoEP
-    const hasExisting = await contract.hasPoEP(normalizedAddress);
+    // Check if user already has a PoEP using balanceOf
+    const balance = await contract.balanceOf(normalizedAddress);
+    const hasExisting = balance > 0;
 
     if (hasExisting) {
       return NextResponse.json(
@@ -93,44 +89,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate and format proof for contract with additional security checks
-    const proofData = proof.proof;
-    if (!proofData.pi_a || !proofData.pi_b || !proofData.pi_c) {
+    // Validate and format proof for contract - expecting pA, pB, pC format from contract.ts
+    if (!proof.pA || !proof.pB || !proof.pC || !proof.nullifier) {
       return NextResponse.json(
-        { error: 'Invalid proof structure: missing pi_a, pi_b, or pi_c' },
+        { error: 'Invalid proof structure: missing pA, pB, pC, or nullifier' },
         { status: 400 }
       );
     }
 
-    const formattedProof = [
-      proofData.pi_a[0],
-      proofData.pi_a[1],
-      proofData.pi_b[0][1],
-      proofData.pi_b[0][0],
-      proofData.pi_b[1][1],
-      proofData.pi_b[1][0],
-      proofData.pi_c[0],
-      proofData.pi_c[1]
-    ];
+    // Format proof according to contract ABI: mint(uint256[2] _pA, uint256[2][2] _pB, uint256[2] _pC, uint256 _nullifier)
+    const pA = proof.pA; // [2] array
+    const pB = proof.pB; // [2][2] array
+    const pC = proof.pC; // [2] array
+    const nullifierBigInt = BigInt(proof.nullifier);
 
-    // Validate all proof elements are valid numbers
-    for (let i = 0; i < formattedProof.length; i++) {
-      if (!formattedProof[i] || typeof formattedProof[i] !== 'string') {
-        return NextResponse.json(
-          { error: `Invalid proof element at index ${i}` },
-          { status: 400 }
-        );
-      }
-    }
+    console.log('Minting with proof:', { pA, pB, pC, nullifier: nullifierBigInt.toString() });
 
-    const publicSignals = [nullifier];
+    // Submit transaction to mint PoEP with proper gas estimation
+    const gasEstimate = await contract.mint.estimateGas(pA, pB, pC, nullifierBigInt);
+    const gasLimit = gasEstimate * 120n / 100n; // Add 20% buffer
 
-    // Additional security: Check if nullifier has been used before
-    // (This would require a database or on-chain check - placeholder for production)
-
-    // Submit transaction to mint PoEP with gas limit protection
-    const gasLimit = 500000; // Reasonable gas limit
-    const tx = await contract.mintPoEP(normalizedAddress, formattedProof, publicSignals, {
+    const tx = await contract.mint(pA, pB, pC, nullifierBigInt, {
       gasLimit: gasLimit
     });
     const receipt = await tx.wait();
@@ -141,7 +120,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the newly minted token ID and trust score
-    const trustScore = await contract.getTrustScore(userAddress);
+    const trustScore = await contract.viewTrustScore(normalizedAddress);
 
     return NextResponse.json({
       success: true,
@@ -150,17 +129,41 @@ export async function POST(request: NextRequest) {
       tokenId: receipt.logs[0]?.topics[3] // Assuming Transfer event
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Minting error:', error);
 
-    // Don't expose sensitive error details in production
+    // Provide specific error messages for common failures
+    let errorMessage = 'Minting failed';
+    let errorDetails = '';
+
+    if (error.message?.includes('insufficient funds')) {
+      errorMessage = 'Insufficient ETH for gas fees';
+      errorDetails = 'Please add more ETH to your wallet to cover gas costs';
+    } else if (error.message?.includes('execution reverted')) {
+      errorMessage = 'Smart contract execution failed';
+      errorDetails = error.reason || 'Transaction was reverted by the contract';
+    } else if (error.message?.includes('network')) {
+      errorMessage = 'Network connection error';
+      errorDetails = 'Please check your internet connection and try again';
+    } else if (error.message?.includes('timeout')) {
+      errorMessage = 'Transaction timeout';
+      errorDetails = 'The transaction took too long to process. Please try again';
+    } else if (error.code === 'UNPREDICTABLE_GAS_LIMIT') {
+      errorMessage = 'Gas estimation failed';
+      errorDetails = 'Unable to estimate gas. The transaction may fail or contract may not be deployed';
+    }
+
     const isDevelopment = process.env.NODE_ENV === 'development';
-    const errorDetails = isDevelopment ? (error as Error).message : 'Internal server error';
 
     return NextResponse.json(
       {
-        error: 'Minting failed',
-        ...(isDevelopment && { details: errorDetails })
+        error: errorMessage,
+        details: errorDetails || (isDevelopment ? error.message : 'Please try again or contact support'),
+        ...(isDevelopment && {
+          fullError: error.message,
+          code: error.code,
+          stack: error.stack?.split('\n').slice(0, 3).join('\n')
+        })
       },
       { status: 500 }
     );
