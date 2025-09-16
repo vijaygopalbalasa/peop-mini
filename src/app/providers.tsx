@@ -1,31 +1,27 @@
 'use client';
 
-import { OnchainKitProvider } from '@coinbase/onchainkit';
-import { base } from 'wagmi/chains';
 import { ReactNode } from 'react';
+import { MiniKitContextProvider } from './providers/MiniKitContextProvider';
+import WagmiProvider from '~/components/providers/WagmiProvider';
+import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
+import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
+import { clusterApiUrl } from '@solana/web3.js';
 
-/**
- * Providers for PoEP Mini App
- *
- * Follows the official Base Mini Apps pattern:
- * - OnchainKitProvider for Base mainnet integration with MiniKit support
- * - MiniKit is automatically available in Base App context
- * - No need for additional Farcaster SDK providers
- */
 export function Providers({ children }: { children: ReactNode }) {
+  // Solana network setup
+  const network = WalletAdapterNetwork.Devnet;
+  const endpoint = clusterApiUrl(network);
+  const wallets = [];
+
   return (
-    <OnchainKitProvider
-      apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
-      chain={base}
-      config={{
-        appearance: {
-          mode: 'auto',
-          theme: 'default',
-          name: 'PoEP - Proof-of-Existence Passport',
-        },
-      }}
-    >
-      {children}
-    </OnchainKitProvider>
+    <ConnectionProvider endpoint={endpoint}>
+      <WalletProvider wallets={wallets} autoConnect>
+        <WagmiProvider>
+          <MiniKitContextProvider>
+            {children}
+          </MiniKitContextProvider>
+        </WagmiProvider>
+      </WalletProvider>
+    </ConnectionProvider>
   );
 }

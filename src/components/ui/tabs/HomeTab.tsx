@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useMiniKit } from '@coinbase/onchainkit/minikit';
 import { Button } from '../Button';
 import { generateFaceHash, generateZKProof, type ZKProofResult } from '~/lib/zkProof';
-import { generateZKProof as contractGenerateZKProof, hasPassport, getTrustScore } from '~/lib/contract';
+import { generateZKProof as contractGenerateZKProof } from '~/lib/contract';
 
 /**
  * HomeTab component for PoEP (Proof-of-Existence Passport)
@@ -37,38 +37,40 @@ export function HomeTab() {
   const [_zkProof, setZkProof] = useState<ZKProofResult | null>(null);
   const [userTrustScore, setUserTrustScore] = useState<number>(0);
   const [hasExistingPassport, setHasExistingPassport] = useState<boolean>(false);
+  const [mounted, setMounted] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const { context, setFrameReady, isFrameReady } = useMiniKit();
+  // Base MiniKit integration
+  const { context } = useMiniKit();
+  const user = context?.user;
+  const client = context?.client;
 
-  // Initialize frame readiness
+  // Handle client-side mounting
   useEffect(() => {
-    if (!isFrameReady) {
-      setFrameReady();
-    }
-  }, [isFrameReady, setFrameReady]);
+    setMounted(true);
+  }, []);
 
   // Check for existing passport when component mounts
   useEffect(() => {
     const checkExistingPassport = async () => {
-      if (context?.user?.walletAddress) {
+      if (user?.fid) {
         try {
-          const hasExisting = await hasPassport(context.user.walletAddress);
-          setHasExistingPassport(hasExisting);
-
-          if (hasExisting) {
-            const score = await getTrustScore(context.user.walletAddress as `0x${string}`);
-            setUserTrustScore(score);
+          const response = await fetch(`/api/check-poep?fid=${user.fid}`);
+          if (response.ok) {
+            const data = await response.json();
+            setHasExistingPassport(data.hasPoEP);
+            setUserTrustScore(data.trustScore || 0);
           }
         } catch (error) {
-          console.error('Failed to check existing passport:', error);
+          setHasExistingPassport(false);
+          setUserTrustScore(0);
         }
       }
     };
 
     checkExistingPassport();
-  }, [context?.user?.walletAddress]);
+  }, [user]);
 
   const startCamera = async () => {
     try {
@@ -134,33 +136,40 @@ export function HomeTab() {
       await mintPoEPNFT(proof);
 
       setCurrentStep(PoEPStep.Success);
-    } catch (_err) {
-      console.error('Processing failed:', _err);
-      setError('Failed to process image or generate proof');
+    } catch (err) {
+      console.error('Processing failed:', err);
+      setError(`Failed to process image or generate proof: ${(err as Error).message}`);
       setCurrentStep(PoEPStep.Error);
     }
   };
 
 
-  const mintPoEPNFT = async (_proof: ZKProofResult) => {
+  const mintPoEPNFT = async (proof: ZKProofResult) => {
     try {
-      // Use the real contract ZK proof generation and minting
-      const contractProof = await contractGenerateZKProof();
+      // Generate contract-compatible ZK proof using the same face hash
+      const contractProof = await contractGenerateZKProof(proof.faceHash, proof.nonce);
 
-      // In a real implementation, we would send the proof to the smart contract
-      // For now, we'll simulate the minting process
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Submit the ZK proof to the PoEP smart contract on Base
+      const response = await fetch('/api/mint-poep', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          proof: contractProof,
+          nullifier: proof.nullifier.toString(), // Convert BigInt to string
+          userFid: context?.user?.fid
+        })
+      });
 
-      console.log('NFT minted with proof:', contractProof);
+      if (!response.ok) {
+        throw new Error('Minting failed');
+      }
+
+      const result = await response.json();
 
       // Update user state after successful mint
-      if (context?.user?.walletAddress) {
-        const score = await getTrustScore(context.user.walletAddress as `0x${string}`);
-        setUserTrustScore(score);
-        setHasExistingPassport(true);
-      }
+      setUserTrustScore(result.trustScore || 100);
+      setHasExistingPassport(true);
     } catch (error) {
-      console.error('Failed to mint NFT:', error);
       throw error;
     }
   };
@@ -348,6 +357,17 @@ export function HomeTab() {
       </Button>
     </div>
   );
+
+  if (!mounted) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-200px)] px-6">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading PoEP...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-200px)] px-6">

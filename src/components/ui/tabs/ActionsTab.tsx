@@ -1,203 +1,94 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMiniKit } from '@coinbase/onchainkit/minikit';
-import { ShareButton } from '../Share';
 import { Button } from '../Button';
 import { SignIn } from '../wallet/SignIn';
-import { type Haptics } from '@farcaster/miniapp-sdk';
-import { APP_URL } from '~/lib/constants';
 
 /**
- * ActionsTab component handles mini app actions like sharing, notifications, and haptic feedback.
+ * ActionsTab component for PoEP Mini App
  *
- * This component provides the main interaction interface for users to:
- * - Share the mini app with others
- * - Sign in with Farcaster
- * - Send notifications to their account
- * - Trigger haptic feedback
- * - Add the mini app to their client
- * - Copy share URLs
- *
- * The component uses the useMiniKit hook to access Farcaster context and actions.
- * All state is managed locally within this component.
- *
- * @example
- * ```tsx
- * <ActionsTab />
- * ```
+ * Simplified actions tab that works with Base MiniKit.
+ * Provides basic user information and authentication.
  */
 export function ActionsTab() {
-  // --- Hooks ---
-  const { actions, added, notificationDetails, haptics, context } =
-    useMiniKit();
+  const { context } = useMiniKit();
+  const [shareUrlCopied, setShareUrlCopied] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  // --- State ---
-  const [notificationState, setNotificationState] = useState({
-    sendStatus: '',
-    shareUrlCopied: false,
-  });
-  const [selectedHapticIntensity, setSelectedHapticIntensity] =
-    useState<Haptics.ImpactOccurredType>('medium');
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  // --- Handlers ---
-  /**
-   * Sends a notification to the current user's Farcaster account.
-   *
-   * This function makes a POST request to the /api/send-notification endpoint
-   * with the user's FID and notification details. It handles different response
-   * statuses including success (200), rate limiting (429), and errors.
-   *
-   * @returns Promise that resolves when the notification is sent or fails
-   */
-  const sendFarcasterNotification = useCallback(async () => {
-    setNotificationState((prev) => ({ ...prev, sendStatus: '' }));
-    if (!notificationDetails || !context) {
-      return;
-    }
-    try {
-      const response = await fetch('/api/send-notification', {
-        method: 'POST',
-        mode: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fid: context.user.fid,
-          notificationDetails,
-        }),
-      });
-      if (response.status === 200) {
-        setNotificationState((prev) => ({ ...prev, sendStatus: 'Success' }));
-        return;
-      } else if (response.status === 429) {
-        setNotificationState((prev) => ({
-          ...prev,
-          sendStatus: 'Rate limited',
-        }));
-        return;
-      }
-      const responseText = await response.text();
-      setNotificationState((prev) => ({
-        ...prev,
-        sendStatus: `Error: ${responseText}`,
-      }));
-    } catch (error) {
-      setNotificationState((prev) => ({
-        ...prev,
-        sendStatus: `Error: ${error}`,
-      }));
-    }
-  }, [context, notificationDetails]);
+  const copyShareUrl = async () => {
+    const shareUrl = window.location.href;
+    await navigator.clipboard.writeText(shareUrl);
+    setShareUrlCopied(true);
+    setTimeout(() => setShareUrlCopied(false), 2000);
+  };
 
-  /**
-   * Copies the share URL for the current user to the clipboard.
-   *
-   * This function generates a share URL using the user's FID and copies it
-   * to the clipboard. It shows a temporary "Copied!" message for 2 seconds.
-   */
-  const copyUserShareUrl = useCallback(async () => {
-    if (context?.user?.fid) {
-      const userShareUrl = `${APP_URL}/share/${context.user.fid}`;
-      await navigator.clipboard.writeText(userShareUrl);
-      setNotificationState((prev) => ({ ...prev, shareUrlCopied: true }));
-      setTimeout(
-        () =>
-          setNotificationState((prev) => ({ ...prev, shareUrlCopied: false })),
-        2000
-      );
-    }
-  }, [context?.user?.fid]);
+  if (!mounted) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 border-t-transparent"></div>
+      </div>
+    );
+  }
 
-  /**
-   * Triggers haptic feedback with the selected intensity.
-   *
-   * This function calls the haptics.impactOccurred method with the current
-   * selectedHapticIntensity setting. It handles errors gracefully by logging them.
-   */
-  const triggerHapticFeedback = useCallback(async () => {
-    try {
-      await haptics.impactOccurred(selectedHapticIntensity);
-    } catch (error) {
-      console.error('Haptic feedback failed:', error);
-    }
-  }, [haptics, selectedHapticIntensity]);
-
-  // --- Render ---
   return (
-    <div className="space-y-3 px-6 w-full max-w-md mx-auto">
-      {/* Share functionality */}
-      <ShareButton
-        buttonText="Share Mini App"
-        cast={{
-          text: 'Check out this awesome frame @1 @2 @3! 🚀🪐',
-          bestFriends: true,
-          embeds: [`${APP_URL}/share/${context?.user?.fid || ''}`],
-        }}
-        className="w-full"
-      />
-
-      {/* Authentication */}
-      <SignIn />
-
-      {/* Mini app actions */}
-      <Button
-        onClick={() =>
-          actions.openUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ')
-        }
-        className="w-full"
-      >
-        Open Link
-      </Button>
-
-      <Button onClick={actions.addMiniApp} disabled={added} className="w-full">
-        Add Mini App to Client
-      </Button>
-
-      {/* Notification functionality */}
-      {notificationState.sendStatus && (
-        <div className="text-sm w-full">
-          Send notification result: {notificationState.sendStatus}
+    <div className="space-y-6 px-6 w-full max-w-md mx-auto">
+      {/* User Context Information */}
+      {context && (
+        <div className="bg-card p-4 rounded-lg border">
+          <h3 className="font-semibold mb-3">Base App Context</h3>
+          <div className="space-y-2 text-sm">
+            {context.user && (
+              <div>
+                <p className="text-muted-foreground">User: {context.user.displayName || 'Anonymous'}</p>
+                {context.user.fid && (
+                  <p className="text-muted-foreground">FID: {context.user.fid}</p>
+                )}
+              </div>
+            )}
+            {context.client && (
+              <div>
+                <p className="text-muted-foreground">
+                  Client Added: {context.client.added ? 'Yes' : 'No'}
+                </p>
+                <p className="text-muted-foreground">
+                  Client FID: {context.client.clientFid || 'Unknown'}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       )}
-      <Button
-        onClick={sendFarcasterNotification}
-        disabled={!notificationDetails}
-        className="w-full"
-      >
-        Send notification
-      </Button>
 
-      {/* Share URL copying */}
-      <Button
-        onClick={copyUserShareUrl}
-        disabled={!context?.user?.fid}
-        className="w-full"
-      >
-        {notificationState.shareUrlCopied ? 'Copied!' : 'Copy share URL'}
-      </Button>
+      {/* Authentication */}
+      <div>
+        <h3 className="font-semibold mb-3">Authentication</h3>
+        <SignIn />
+      </div>
 
-      {/* Haptic feedback controls */}
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Haptic Intensity
-        </label>
-        <select
-          value={selectedHapticIntensity}
-          onChange={(e) =>
-            setSelectedHapticIntensity(
-              e.target.value as Haptics.ImpactOccurredType
-            )
-          }
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
+      {/* Share functionality */}
+      <div className="space-y-3">
+        <h3 className="font-semibold">Share PoEP</h3>
+        <Button
+          onClick={copyShareUrl}
+          className="w-full"
+          variant="outline"
         >
-          <option value={'light'}>Light</option>
-          <option value={'medium'}>Medium</option>
-          <option value={'heavy'}>Heavy</option>
-          <option value={'soft'}>Soft</option>
-          <option value={'rigid'}>Rigid</option>
-        </select>
-        <Button onClick={triggerHapticFeedback} className="w-full">
-          Trigger Haptic Feedback
+          {shareUrlCopied ? 'Copied!' : 'Copy App URL'}
         </Button>
+      </div>
+
+      {/* App Info */}
+      <div className="bg-blue-50 p-4 rounded-lg text-sm">
+        <h4 className="font-semibold text-blue-800 mb-2">About PoEP</h4>
+        <p className="text-blue-700">
+          PoEP (Proof-of-Existence Passport) creates a privacy-first identity badge
+          using ZK-SNARKs and soul-bound NFTs on Base.
+        </p>
       </div>
     </div>
   );

@@ -28,7 +28,7 @@ import { renderError } from "../../../lib/errorUtils";
  */
 export function SignEvmMessage() {
   // --- Hooks ---
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
   const { connectAsync, connectors } = useConnect();
   const {
     signMessage,
@@ -62,8 +62,8 @@ export function SignEvmMessage() {
       });
     }
 
-    signMessage({ message: `Hello from ${APP_NAME}!` });
-  }, [connectAsync, connectors, isConnected, signMessage]);
+    signMessage({ message: `Hello from ${APP_NAME}!`, account: address });
+  }, [connectAsync, connectors, isConnected, signMessage, address]);
 
   // --- Render ---
   return (

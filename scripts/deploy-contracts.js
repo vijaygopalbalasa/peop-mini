@@ -7,9 +7,14 @@
  * Supports both Base Sepolia (testnet) and Base Mainnet
  */
 
-const { ethers } = require('hardhat');
-const fs = require('fs');
-const path = require('path');
+import hre from 'hardhat';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const { ethers } = hre;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Configuration
 const NETWORKS = {
@@ -189,7 +194,7 @@ async function main() {
 }
 
 // Run deployment
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   main()
     .then(() => process.exit(0))
     .catch((error) => {
@@ -198,4 +203,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { ContractDeployer, verifyContract };
+export { ContractDeployer, verifyContract };

@@ -103,23 +103,22 @@ export function useQuickAuth(): UseQuickAuthReturn {
   useEffect(() => {
     const checkExistingAuthentication = async () => {
       try {
-        // Attempt to retrieve existing token from QuickAuth SDK
-        const { token } = await sdk.quickAuth.getToken();
-
-        if (token) {
-          // Validate the token with our server-side API
-          const validatedUserSession = await validateTokenWithServer(token);
-
-          if (validatedUserSession) {
-            // Token is valid, set authenticated state
-            setAuthenticatedUser(validatedUserSession);
-            setStatus('authenticated');
+        // Check if we already have a QuickAuth token
+        try {
+          const token = await sdk.quickAuth.getToken();
+          if (token && typeof token === 'string') {
+            const validatedUser = await validateTokenWithServer(token);
+            if (validatedUser) {
+              setAuthenticatedUser(validatedUser);
+              setStatus('authenticated');
+            } else {
+              setStatus('unauthenticated');
+            }
           } else {
-            // Token is invalid or expired, clear authentication state
             setStatus('unauthenticated');
           }
-        } else {
-          // No existing token found, user is not authenticated
+        } catch (_tokenError) {
+          // QuickAuth not available or errored - set as unauthenticated
           setStatus('unauthenticated');
         }
       } catch (error) {
@@ -144,24 +143,29 @@ export function useQuickAuth(): UseQuickAuthReturn {
     try {
       setStatus('loading');
 
-      // Get QuickAuth session token
-      const { token } = await sdk.quickAuth.getToken();
+      // Get QuickAuth token - this will trigger the SIWF flow if needed
+      try {
+        const token = await sdk.quickAuth.getToken();
 
-      if (token) {
-        // Validate the token with our server-side API
-        const validatedUserSession = await validateTokenWithServer(token);
-
-        if (validatedUserSession) {
-          // Authentication successful, update user state
-          setAuthenticatedUser(validatedUserSession);
-          setStatus('authenticated');
-          return true;
+        if (token && typeof token === 'string') {
+          const validatedUser = await validateTokenWithServer(token);
+          if (validatedUser) {
+            setAuthenticatedUser(validatedUser);
+            setStatus('authenticated');
+            return true;
+          } else {
+            setStatus('unauthenticated');
+            return false;
+          }
+        } else {
+          setStatus('unauthenticated');
+          return false;
         }
+      } catch (_tokenError) {
+        console.error('QuickAuth token retrieval failed:', _tokenError);
+        setStatus('unauthenticated');
+        return false;
       }
-
-      // Authentication failed, clear user state
-      setStatus('unauthenticated');
-      return false;
     } catch (error) {
       console.error('Sign-in process failed:', error);
       setStatus('unauthenticated');
@@ -189,8 +193,8 @@ export function useQuickAuth(): UseQuickAuthReturn {
    */
   const getToken = useCallback(async (): Promise<string | null> => {
     try {
-      const { token } = await sdk.quickAuth.getToken();
-      return token;
+      const token = await sdk.quickAuth.getToken();
+      return typeof token === 'string' ? token : null;
     } catch (error) {
       console.error('Failed to retrieve authentication token:', error);
       return null;

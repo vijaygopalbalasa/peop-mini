@@ -3,7 +3,6 @@
 import { useAccount, useWatchContractEvent } from 'wagmi';
 import { useEffect, useState, useCallback } from 'react';
 import { hasPassport } from '~/lib/contract';
-import { MintButton } from '~/components/MintButton';
 import { POEP_CONTRACT_ABI } from '~/lib/constants';
 import { POEP_CONTRACT_ADDRESS } from '~/lib/config';
 
@@ -69,8 +68,8 @@ export default function PassportManager() {
   return (
     <div className="card p-5 text-center">
       <h2 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">Create Your Proof-of-Existence Passport</h2>
-      <p className="mb-4 text-gray-700 dark:text-gray-300">Mint your unique, soul-bound NFT to establish your onchain identity.</p>
-      <MintButton onMintSuccess={checkPassport} />
+      <p className="mb-4 text-gray-700 dark:text-gray-300">Use the camera tab to take a selfie and create your unique, soul-bound NFT.</p>
+      <p className="text-sm text-blue-600 dark:text-blue-400">↑ Go to the Home tab to get started</p>
     </div>
   );
 }

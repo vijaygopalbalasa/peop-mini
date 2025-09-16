@@ -95,8 +95,7 @@ function ConnectionControls({
         </Button>
         <Button
           onClick={() => {
-            console.log("Manual Farcaster connection attempt");
-            console.log("Connectors:", connectors.map((c, i) => `${i}: ${c.name}`));
+            // Manual Farcaster connection attempt
             connect({ connector: connectors[0] });
           }}
           className="w-full"
@@ -120,7 +119,7 @@ function ConnectionControls({
 
 export function WalletTab() {
   // --- State ---
-  const [evmContractTransactionHash, setEvmContractTransactionHash] = useState<string | null>(null);
+  // Test contract transaction state removed
   
   // --- Hooks ---
   const { context } = useMiniKit();
@@ -139,7 +138,7 @@ export function WalletTab() {
 
   const { isLoading: isEvmTransactionConfirming, isSuccess: isEvmTransactionConfirmed } =
     useWaitForTransactionReceipt({
-      hash: evmContractTransactionHash as `0x${string}`,
+      hash: null,
     });
 
   const {
@@ -169,31 +168,23 @@ export function WalletTab() {
    */
   useEffect(() => {
     // Check if we're in a Farcaster client environment
-    const isInFarcasterClient = typeof window !== 'undefined' && 
-      (window.location.href.includes('warpcast.com') || 
+    const isInFarcasterClient = typeof window !== 'undefined' &&
+      (window.location.href.includes('warpcast.com') ||
        window.location.href.includes('farcaster') ||
-       window.ethereum?.isFarcaster ||
+       (window as any).ethereum?.isFarcaster ||
        context?.client);
     
     if (context?.user?.fid && !isConnected && connectors.length > 0 && isInFarcasterClient) {
-      console.log("Attempting auto-connection with Farcaster context...");
-      console.log("- User FID:", context.user.fid);
-      console.log("- Available connectors:", connectors.map((c, i) => `${i}: ${c.name}`));
-      console.log("- Using connector:", connectors[0].name);
-      console.log("- In Farcaster client:", isInFarcasterClient);
+      // Attempting auto-connection with Farcaster context
       
       // Use the first connector (farcasterFrame) for auto-connection
       try {
         connect({ connector: connectors[0] });
       } catch (error) {
-        console.error("Auto-connection failed:", error);
+        // Auto-connection failed
       }
     } else {
-      console.log("Auto-connection conditions not met:");
-      console.log("- Has context:", !!context?.user?.fid);
-      console.log("- Is connected:", isConnected);
-      console.log("- Has connectors:", connectors.length > 0);
-      console.log("- In Farcaster client:", isInFarcasterClient);
+      // Auto-connection conditions not met
     }
   }, [context?.user?.fid, isConnected, connectors, connect, context?.client]);
 
@@ -231,20 +222,7 @@ export function WalletTab() {
    * This function sends a transaction to a specific contract address with
    * the encoded function call data for the yoink() function.
    */
-  const sendEvmContractTransaction = useCallback(() => {
-    sendTransaction(
-      {
-        // call yoink() on Yoink contract
-        to: "0x4bBFD120d9f352A0BEd7a014bd67913a2007a878",
-        data: "0x9846cd9efc000023c0",
-      },
-      {
-        onSuccess: (hash) => {
-          setEvmContractTransactionHash(hash);
-        },
-      }
-    );
-  }, [sendTransaction]);
+  // Contract transaction functionality removed - use main PoEP flow instead
 
   /**
    * Signs typed data using EIP-712 standard.
@@ -266,8 +244,9 @@ export function WalletTab() {
         content: `Hello from ${APP_NAME}!`,
       },
       primaryType: "Message",
+      account: address,
     });
-  }, [chainId, signTypedData]);
+  }, [chainId, signTypedData, address]);
 
   // --- Early Return ---
   if (!USE_WALLET) {
@@ -295,27 +274,8 @@ export function WalletTab() {
       {isConnected && (
         <>
           <SendEth />
-          <Button
-            onClick={sendEvmContractTransaction}
-            disabled={!isConnected || isEvmTransactionPending}
-            className="w-full"
-          >
-            Send Transaction (contract)
-          </Button>
+          {/* Test contract transaction removed - use main PoEP flow instead */}
           {isEvmTransactionError && renderError(evmTransactionError)}
-          {evmContractTransactionHash && (
-            <div className="text-xs w-full">
-              <div>Hash: {truncateAddress(evmContractTransactionHash)}</div>
-              <div>
-                Status:{" "}
-                {isEvmTransactionConfirming
-                  ? "Confirming..."
-                  : isEvmTransactionConfirmed
-                  ? "Confirmed!"
-                  : "Pending"}
-              </div>
-            </div>
-          )}
           <Button
             onClick={signTyped}
             disabled={!isConnected || isEvmSignTypedDataPending}

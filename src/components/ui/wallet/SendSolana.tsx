@@ -40,9 +40,11 @@ export function SendSolana() {
   const { connection: solanaConnection } = useSolanaConnection();
   const { sendTransaction, publicKey } = useSolanaWallet();
 
-  // This should be replaced but including it from the original demo
-  // https://github.com/farcasterxyz/frames-v2-demo/blob/main/src/components/Demo.tsx#L718
-  const ashoatsPhantomSolanaWallet = 'Ao3gLNZAsbrmnusWVqQCPMrcqNi6jdYgu8T6NCoXXQu1';
+  const recipientAddress = process.env.NEXT_PUBLIC_SOLANA_RECIPIENT_ADDRESS;
+
+  if (!recipientAddress) {
+    throw new Error('NEXT_PUBLIC_SOLANA_RECIPIENT_ADDRESS environment variable is required');
+  }
 
   /**
    * Handles sending the Solana transaction
@@ -60,7 +62,7 @@ export function SendSolana() {
       }
 
       const fromPubkeyStr = publicKey.toBase58();
-      const toPubkeyStr = ashoatsPhantomSolanaWallet;
+      const toPubkeyStr = recipientAddress;
       const transaction = new Transaction();
       transaction.add(
         SystemProgram.transfer({

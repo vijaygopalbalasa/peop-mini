@@ -1,7 +1,6 @@
 'use client';
 
 import { useMiniKit } from '@coinbase/onchainkit/minikit';
-import { useAuthenticate } from '@coinbase/onchainkit/minikit';
 import { ReactNode } from 'react';
 import { Button } from './ui/Button';
 
@@ -10,61 +9,77 @@ import { Button } from './ui/Button';
  *
  * Follows Base Mini Apps authentication best practices:
  * - Defer authentication until value is shown
- * - Use client context for UI hints
- * - Use verified user for secure operations
+ * - Use client context for UI hints only
  * - Progressive disclosure pattern
+ * - Wallet-optional flows with clear value moments
  */
 
 interface AuthGateProps {
   children: ReactNode;
   requireAuth?: boolean;
   fallback?: ReactNode;
+  valueMessage?: string;
 }
 
-export function AuthGate({ children, requireAuth = false, fallback }: AuthGateProps) {
+export function AuthGate({ children, requireAuth = false, fallback, valueMessage }: AuthGateProps) {
   const { context } = useMiniKit();
-  const { signIn } = useAuthenticate();
 
-  // Use context for UI hints only (can be spoofed)
+  // Use context for UI hints only (can be spoofed by non-official hosts)
   const displayName = context?.user?.displayName ?? context?.user?.username ?? 'Friend';
   const pfpUrl = context?.user?.pfpUrl;
 
-  // For now, we'll use context for basic auth state
-  // In production, you'd track authenticated state separately
-  const isAuthenticated = !!context?.user;
+  // Check if user context exists (for UI hints only)
+  const hasUserContext = !!context?.user;
 
-  // If auth is not required, show content with context hints
+  // If auth is not required, show content with personalized context hints
   if (!requireAuth) {
     return (
       <div>
-        <div className="flex items-center gap-2 mb-4 p-2 bg-muted rounded-lg">
-          {pfpUrl && (
-            <img
-              src={pfpUrl}
-              alt="Profile"
-              className="w-8 h-8 rounded-full"
-            />
-          )}
-          <span className="text-sm text-muted-foreground">
-            Welcome, {displayName}!
-          </span>
-        </div>
+        {hasUserContext && (
+          <div className="flex items-center gap-2 mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            {pfpUrl && (
+              <img
+                src={pfpUrl}
+                alt="Profile"
+                className="w-8 h-8 rounded-full"
+              />
+            )}
+            <span className="text-sm font-medium text-blue-800">
+              👋 Welcome, {displayName}!
+            </span>
+          </div>
+        )}
         {children}
       </div>
     );
   }
 
-  // If auth is required but user is not authenticated
-  if (!isAuthenticated) {
+  // If auth is required, show value-first prompt
+  if (!hasUserContext) {
     return (
       <div className="text-center p-6 bg-card rounded-lg border">
-        <h3 className="text-lg font-semibold mb-2">Authentication Required</h3>
-        <p className="text-muted-foreground mb-4">
-          You need to sign in to access this feature
-        </p>
-        <Button variant="default" onClick={() => signIn()}>
-          Sign In
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold mb-2">Ready to Create Your PoEP?</h3>
+          <p className="text-muted-foreground mb-4">
+            {valueMessage || 'Connect to mint your soul-bound identity NFT on Base'}
+          </p>
+        </div>
+
+        {/* Show value proposition before auth */}
+        <div className="bg-muted p-4 rounded-lg mb-4 text-left">
+          <h4 className="font-medium mb-2">What you&apos;ll get:</h4>
+          <ul className="text-sm text-muted-foreground space-y-1">
+            <li>• Privacy-first biometric verification</li>
+            <li>• Zero-knowledge proof of humanity</li>
+            <li>• Soul-bound NFT on Base mainnet</li>
+            <li>• Trust score that grows with activity</li>
+          </ul>
+        </div>
+
+        <Button variant="default" className="w-full mb-2">
+          Get Started
         </Button>
+
         {fallback && (
           <div className="mt-4">
             {fallback}
@@ -74,10 +89,10 @@ export function AuthGate({ children, requireAuth = false, fallback }: AuthGatePr
     );
   }
 
-  // User is authenticated, show protected content
+  // User has context, show authenticated content
   return (
     <div>
-      <div className="flex items-center gap-2 mb-4 p-2 bg-green-50 border border-green-200 rounded-lg">
+      <div className="flex items-center gap-2 mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
         {pfpUrl && (
           <img
             src={pfpUrl}
@@ -87,7 +102,7 @@ export function AuthGate({ children, requireAuth = false, fallback }: AuthGatePr
         )}
         <div className="flex-1">
           <span className="text-sm font-medium text-green-800">
-            ✅ Authenticated as {displayName}
+            ✅ Ready to go, {displayName}!
           </span>
         </div>
       </div>

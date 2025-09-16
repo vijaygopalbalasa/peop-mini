@@ -55,7 +55,9 @@ contract PoEP is ERC721, Ownable, ReentrancyGuard {
 
     /**
      * @dev Mint a PoEP NFT using ZK proof
-     * @param proof ZK-SNARK proof components [pA, pB, pC]
+     * @param _pA ZK-SNARK proof component A
+     * @param _pB ZK-SNARK proof component B
+     * @param _pC ZK-SNARK proof component C
      * @param nullifier Public nullifier from the proof
      */
     function mint(
@@ -115,6 +117,15 @@ contract PoEP is ERC721, Ownable, ReentrancyGuard {
         trustScores[user] = newScore;
 
         emit ScoreUpdated(user, oldScore, newScore);
+    }
+
+    /**
+     * @dev Check if an address has a PoEP passport
+     * @param user Address to check
+     * @return true if user has minted a passport
+     */
+    function hasPassport(address user) external view returns (bool) {
+        return hasMinted[user];
     }
 
     /**

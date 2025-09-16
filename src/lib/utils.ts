@@ -43,36 +43,62 @@ function withValidProperties(properties: Record<string, undefined | string | str
 }
 
 export async function getBaseMiniAppManifest() {
-  // Build manifest according to Base Mini Apps specification
-  const manifest: any = {
-    accountAssociation: APP_ACCOUNT_ASSOCIATION || {
-      header: "eyJmaWQiOjkxNTIsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHgwMmVmNzkwRGQ3OTkzQTM1ZkQ4NDdDMDUzRURkQUU5NDBEMDU1NTk2In0",
-      payload: "eyJkb21haW4iOiJhcHAuZXhhbXBsZS5jb20ifQ",
-      signature: "MHgxMGQwZGU4ZGYwZDUwZTdmMGIxN2YxMTU2NDI1MjRmZTY0MTUyZGU4ZGU1MWU0MThiYjU4ZjVmZmQxYjRjNDBiNGVlZTRhNDcwNmVmNjhlMzQ0ZGQ5MDBkYmQyMmNlMmVlZGY5ZGQ0N2JlNWRmNzMwYzUxNjE4OWVjZDJjY2Y0MDFj"
+  // Build manifest according to Farcaster Mini Apps specification 2025
+  const manifest = {
+    // Required: Account association for domain verification
+    accountAssociation: APP_ACCOUNT_ASSOCIATION,
+
+    // Required: Mini app metadata (NEW FORMAT)
+    miniapp: {
+      version: '1', // Required: Always "1"
+      name: 'PoEP - Proof-of-Existence Passport', // Required: Max 32 chars
+      homeUrl: APP_URL, // Required: HTTPS URL
+      iconUrl: APP_ICON_URL, // Required: 1024x1024 PNG, no alpha
+      imageUrl: APP_OG_IMAGE_URL, // Required: 3:2 aspect ratio for embed
+      splashImageUrl: APP_SPLASH_URL, // Optional: 200x200px loading screen
+      splashBackgroundColor: APP_SPLASH_BACKGROUND_COLOR, // Optional: Hex color
+      webhookUrl: APP_WEBHOOK_URL, // Optional but recommended
+
+      // Button configuration for embed
+      button: {
+        title: 'Launch PoEP', // Max 32 characters
+        action: {
+          type: 'launch_miniapp', // Use new launch_miniapp type
+          url: APP_URL
+        }
+      },
+
+      // Required capabilities for iframe embedding
+      requiredCapabilities: ['camera', 'clipboard-write'],
+      requiredChains: ['eip155:8453'], // Base mainnet
+
+      // Content metadata
+      subtitle: 'Privacy-first human verification',
+      description: 'Prove your humanity with zero-knowledge proofs on Base. Mint your soul-bound identity NFT with privacy-first camera capture and cryptographic verification.',
+
+      // Discovery metadata
+      primaryCategory: 'utility',
+      tags: ['identity', 'zk', 'passport', 'base', 'nft']
     },
-    baseBuilder: {
-      allowedAddresses: ['0xB348370a74fed9e5C86a45681b01941121246381']
-    },
-    frame: withValidProperties({
+
+    // Legacy frame format for backward compatibility
+    frame: {
       version: '1',
-      name: APP_NAME ?? 'PoEP - Proof-of-Existence Passport',
+      name: 'PoEP - Proof-of-Existence Passport',
       homeUrl: APP_URL,
       iconUrl: APP_ICON_URL,
       splashImageUrl: APP_SPLASH_URL,
       splashBackgroundColor: APP_SPLASH_BACKGROUND_COLOR,
       webhookUrl: APP_WEBHOOK_URL,
-      subtitle: 'Privacy-first human verification',
-      description: APP_DESCRIPTION || 'Prove your humanity with ZK. Mint soul-bound NFT. Build trust score.',
-      screenshotUrls: [`${APP_URL}/screenshot.png`],
-      primaryCategory: APP_PRIMARY_CATEGORY || 'utility',
-      tags: APP_TAGS?.length > 0 ? APP_TAGS : ['identity', 'zk', 'passport', 'base'],
-      heroImageUrl: APP_OG_IMAGE_URL,
-      tagline: 'Prove your humanity with ZK',
-      ogTitle: APP_NAME,
-      ogDescription: APP_DESCRIPTION,
-      ogImageUrl: APP_OG_IMAGE_URL,
-      noindex: false
-    })
+      imageUrl: APP_OG_IMAGE_URL,
+      button: {
+        title: 'Launch PoEP',
+        action: {
+          type: 'launch_frame', // Legacy type for compatibility
+          url: APP_URL
+        }
+      }
+    }
   };
 
   return manifest;

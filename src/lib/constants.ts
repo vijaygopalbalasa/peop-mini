@@ -94,7 +94,7 @@ export const APP_BUTTON_TEXT: string = 'Launch';
  * Neynar webhook endpoint. Otherwise, falls back to a local webhook
  * endpoint for development and testing.
  */
-export const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY || "NEYNAR_API_DOCS";
+export const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY || "";
 export const NEYNAR_CLIENT_ID = process.env.NEYNAR_CLIENT_ID || "";
 export const NEYNAR_WEBHOOK_SECRET = process.env.NEYNAR_WEBHOOK_SECRET || "";
 export const NEYNAR_MANAGED_SIGNER_UUID = process.env.NEYNAR_MANAGED_SIGNER_UUID || "";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMiniKit } from '@coinbase/onchainkit/minikit';
 import { Header } from '~/components/ui/Header';
 import { Footer } from '~/components/ui/Footer';
@@ -53,19 +53,25 @@ export default function App(
 ) {
   // --- Hooks ---
   const [currentTab, setActiveTab] = useState<Tab>(Tab.Home);
-  const { context, isFrameReady } = useMiniKit();
-  const isLoading = !isFrameReady;
+  const [mounted, setMounted] = useState(false);
 
-  // --- Neynar user hook ---
+  // MiniKit integration
+  const { context } = useMiniKit();
   const user = context?.user;
+  const client = context?.client;
+
+  // --- Client-side mounting ---
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // --- Early Returns ---
-  if (isLoading) {
+  if (!mounted) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
-          <div className="spinner h-8 w-8 mx-auto mb-4"></div>
-          <p>Initializing Mini App...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 border-t-transparent mx-auto mb-4"></div>
+          <p>Loading PoEP...</p>
         </div>
       </div>
     );
@@ -76,10 +82,10 @@ export default function App(
   return (
     <div
       style={{
-        paddingTop: context?.client.safeAreaInsets?.top ?? 0,
-        paddingBottom: context?.client.safeAreaInsets?.bottom ?? 0,
-        paddingLeft: context?.client.safeAreaInsets?.left ?? 0,
-        paddingRight: context?.client.safeAreaInsets?.right ?? 0,
+        paddingTop: client?.safeAreaInsets?.top ?? 0,
+        paddingBottom: client?.safeAreaInsets?.bottom ?? 0,
+        paddingLeft: client?.safeAreaInsets?.left ?? 0,
+        paddingRight: client?.safeAreaInsets?.right ?? 0,
       }}
     >
       {/* Header should be full width */}

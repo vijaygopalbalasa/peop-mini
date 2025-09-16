@@ -18,7 +18,7 @@ const publicClient = createPublicClient({
 
 export async function hasPassport(address: string): Promise<boolean> {
   try {
-    const result = await publicClient.readContract({
+    const result = await (publicClient as any).readContract({
       address: POEP_CONTRACT_ADDRESS,
       abi: POEP_CONTRACT_ABI,
       functionName: 'balanceOf',
@@ -33,7 +33,7 @@ export async function hasPassport(address: string): Promise<boolean> {
 
 export async function getTrustScore(address: `0x${string}`): Promise<number> {
   try {
-    const score = await publicClient.readContract({
+    const score = await (publicClient as any).readContract({
       address: POEP_CONTRACT_ADDRESS,
       abi: POEP_CONTRACT_ABI,
       functionName: 'viewTrustScore',
@@ -46,25 +46,19 @@ export async function getTrustScore(address: `0x${string}`): Promise<number> {
   }
 }
 
-export const generateZKProof = async () => {
+export const generateZKProof = async (faceHash: string, nonce?: string) => {
   // Real ZK proof generation using snarkjs (loaded via script tag in layout)
   const snarkjs = (window as any).snarkjs;
   if (!snarkjs) throw new Error('snarkjs not loaded');
 
-  // Example inputs (replace with real signals as your circuit expects)
-  const rand = (n: number) => {
-    const bytes = new Uint8Array(n);
-    crypto.getRandomValues(bytes);
-    const hex = Array.from(bytes)
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('');
-    return BigInt('0x' + hex);
-  };
+  // Generate nonce if not provided
+  const actualNonce = nonce || crypto.getRandomValues(new Uint8Array(32)).reduce(
+    (acc, byte) => acc + byte.toString(16).padStart(2, '0'), ''
+  );
 
   const inputs = {
-    faceHash: rand(31),
-    firstTxHash: rand(31),
-    nonce: rand(31),
+    faceHash: faceHash,
+    nonce: actualNonce,
   } as any;
 
   const wasmPath = '/circuit.wasm';
@@ -72,13 +66,13 @@ export const generateZKProof = async () => {
 
   const { proof, publicSignals } = await snarkjs.groth16.fullProve(inputs, wasmPath, zkeyPath);
 
-  const pA = [BigInt(proof.pi_a[0]), BigInt(proof.pi_a[1])] as const;
+  const pA = [proof.pi_a[0], proof.pi_a[1]] as const;
   const pB = [
-    [BigInt(proof.pi_b[0][1]), BigInt(proof.pi_b[0][0])],
-    [BigInt(proof.pi_b[1][1]), BigInt(proof.pi_b[1][0])],
+    [proof.pi_b[0][1], proof.pi_b[0][0]],
+    [proof.pi_b[1][1], proof.pi_b[1][0]],
   ] as const;
-  const pC = [BigInt(proof.pi_c[0]), BigInt(proof.pi_c[1])] as const;
-  const nullifier = BigInt(publicSignals[0]);
+  const pC = [proof.pi_c[0], proof.pi_c[1]] as const;
+  const nullifier = publicSignals[0];
 
   return { pA, pB, pC, nullifier };
 };

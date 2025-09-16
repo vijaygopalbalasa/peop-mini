@@ -39,6 +39,11 @@ function getTierFromScore(score: number): {
 }
 
 export async function GET(request: NextRequest) {
+  const baseUrl = process.env.NEXT_PUBLIC_URL;
+  if (!baseUrl) {
+    throw new Error('NEXT_PUBLIC_URL environment variable is required');
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const scoreParam = searchParams.get('score');
@@ -54,7 +59,6 @@ export async function GET(request: NextRequest) {
     }
 
     const { tier, image, color } = getTierFromScore(trustScore);
-    const baseUrl = process.env.NEXT_PUBLIC_URL || 'https://poep-mini.vercel.app';
 
     const metadata = {
       name: `PoEP ${tier} #${tokenId || 'Unknown'}`,
@@ -114,8 +118,8 @@ export async function GET(request: NextRequest) {
     const fallbackMetadata = {
       name: "PoEP - Proof-of-Existence Passport",
       description: "A soul-bound NFT that proves unique human identity using zero-knowledge proofs.",
-      image: `${process.env.NEXT_PUBLIC_URL || 'https://poep-mini.vercel.app'}/images/poep-standard.svg`,
-      external_url: process.env.NEXT_PUBLIC_URL || 'https://poep-mini.vercel.app',
+      image: `${baseUrl}/images/poep-standard.svg`,
+      external_url: baseUrl,
       background_color: "1a1b23",
       attributes: [
         {
