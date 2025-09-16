@@ -13,7 +13,6 @@ export default function RootLayout({
         <head>
           {/* Security headers */}
           <meta httpEquiv="X-Content-Type-Options" content="nosniff" />
-          <meta httpEquiv="X-Frame-Options" content="SAMEORIGIN" />
           <meta httpEquiv="X-XSS-Protection" content="1; mode=block" />
           <meta httpEquiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
 
@@ -23,29 +22,37 @@ export default function RootLayout({
           {/* MiniKit initialization */}
           <script dangerouslySetInnerHTML={{
             __html: `
-              // Prevent ethereum property redefinition errors
-              if (window.ethereum && Object.getOwnPropertyDescriptor(window, 'ethereum')) {
-                try {
-                  delete window.ethereum;
-                } catch (e) {
-                  // Silent cleanup
+              // Prevent ethereum property redefinition errors - more robust approach
+              if (typeof window !== 'undefined') {
+                const descriptor = Object.getOwnPropertyDescriptor(window, 'ethereum');
+                if (descriptor && descriptor.configurable === false) {
+                  // Property exists and is not configurable, skip redefinition
+                  console.warn('Ethereum property already exists and is not configurable');
+                } else if (window.ethereum) {
+                  try {
+                    delete window.ethereum;
+                  } catch (e) {
+                    console.warn('Could not delete ethereum property:', e);
+                  }
                 }
               }
 
               // Create ready function if not exists
-              if (!window.minikit) {
-                window.minikit = {};
-              }
-              if (!window.minikit.ready) {
-                window.minikit.ready = function() {
-                  if (window.parent && window.parent !== window) {
-                    try {
-                      window.parent.postMessage({ type: 'minikit-ready' }, '*');
-                    } catch (e) {
-                      // Silent failure
+              if (typeof window !== 'undefined') {
+                if (!window.minikit) {
+                  window.minikit = {};
+                }
+                if (!window.minikit.ready) {
+                  window.minikit.ready = function() {
+                    if (window.parent && window.parent !== window) {
+                      try {
+                        window.parent.postMessage({ type: 'minikit-ready' }, '*');
+                      } catch (e) {
+                        console.warn('MiniKit ready message failed:', e);
+                      }
                     }
-                  }
-                };
+                  };
+                }
               }
             `
           }} />
