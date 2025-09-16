@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+// import type { Metadata } from 'next'; // Unused for now
 import '~/app/globals.css';
 import { Providers } from "./providers";
 

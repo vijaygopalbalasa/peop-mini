@@ -15,7 +15,7 @@ const limiter = rateLimit({
 export async function POST(request: NextRequest) {
   try {
     // Apply rate limiting
-    const identifier = request.ip || request.headers.get('x-forwarded-for') || 'anonymous';
+    const identifier = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'anonymous';
     const remaining = await limiter.check(identifier);
 
     if (remaining <= 0) {
