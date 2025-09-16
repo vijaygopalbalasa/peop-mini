@@ -24,6 +24,7 @@
   "dependencies": {
     "@coinbase/onchainkit": "^1.0.0",
     "@farcaster/miniapp-sdk": "^0.1.10",
+    "@farcaster/miniapp-wagmi-connector": "^1.0.0",
     "@radix-ui/react-label": "^2.1.1",
     "@reown/appkit": "^1.0.0",
     "@reown/appkit-adapter-wagmi": "^1.0.0",

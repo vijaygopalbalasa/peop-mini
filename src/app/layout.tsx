@@ -22,19 +22,7 @@ export default function RootLayout({
           {/* MiniKit initialization */}
           <script dangerouslySetInnerHTML={{
             __html: `
-              // Store any existing ethereum provider before MiniKit loads
-              if (typeof window !== 'undefined') {
-                if (window.ethereum && !window.__originalEthereum) {
-                  try {
-                    window.__originalEthereum = window.ethereum;
-                    console.log('Stored original ethereum provider');
-                  } catch (e) {
-                    console.warn('Could not store original ethereum provider:', e);
-                  }
-                }
-              }
-
-              // Create MiniKit ready function
+              // MiniKit ready function - don't interfere with ethereum provider
               if (typeof window !== 'undefined') {
                 if (!window.minikit) {
                   window.minikit = {};
