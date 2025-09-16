@@ -51,10 +51,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate proof structure
-    if (!proof.proof || !proof.publicSignals || !Array.isArray(proof.publicSignals)) {
+    // Validate proof structure - expect pA, pB, pC format from contract.ts
+    if (!proof.pA || !proof.pB || !proof.pC) {
       return NextResponse.json(
-        { error: 'Invalid proof structure' },
+        { error: 'Invalid proof structure: missing pA, pB, or pC' },
         { status: 400 }
       );
     }
@@ -96,19 +96,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate and format proof for contract - expecting pA, pB, pC format from contract.ts
-    if (!proof.pA || !proof.pB || !proof.pC || !proof.nullifier) {
-      return NextResponse.json(
-        { error: 'Invalid proof structure: missing pA, pB, pC, or nullifier' },
-        { status: 400 }
-      );
-    }
+    // Proof is already validated above - format for contract call
 
     // Format proof according to contract ABI: mint(uint256[2] _pA, uint256[2][2] _pB, uint256[2] _pC, uint256 _nullifier)
     const pA = proof.pA; // [2] array
     const pB = proof.pB; // [2][2] array
     const pC = proof.pC; // [2] array
-    const nullifierBigInt = BigInt(proof.nullifier);
+    const nullifierBigInt = BigInt(nullifier); // Use the separate nullifier parameter
 
     console.log('Minting with proof:', { pA, pB, pC, nullifier: nullifierBigInt.toString() });
 

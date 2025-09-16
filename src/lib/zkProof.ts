@@ -80,26 +80,39 @@ export async function extractFaceFeatures(imageData: string): Promise<FaceFeatur
 
     // Fallback to simpler but still deterministic feature extraction
     try {
-      // Convert base64 data URL to proper format if needed
+      // Validate data URL format
+      if (!imageData || typeof imageData !== 'string') {
+        throw new Error('Invalid image data provided');
+      }
+
+      // Ensure we have a proper data URL
       let processedImageData = imageData;
-      if (imageData.startsWith('data:image/')) {
-        // It's already a data URL, use it directly
-        processedImageData = imageData;
-      } else {
-        // Convert to data URL if it's raw data
+      if (!imageData.startsWith('data:image/')) {
+        // If it's base64 data without data URL prefix, add it
         processedImageData = `data:image/jpeg;base64,${imageData}`;
       }
 
-      // Create an image element instead of using fetch for better browser compatibility
+      console.log('Processing image data URL, length:', processedImageData.length);
+
+      // Create an image element for processing
       const img = new Image();
-      img.crossOrigin = 'anonymous'; // Handle CORS if needed
 
       return new Promise<FaceFeatures>((resolve, reject) => {
+        // Set up error handling first
+        img.onerror = (error) => {
+          console.error('Image load error:', error);
+          reject(new Error('Failed to load image for processing - invalid image data'));
+        };
+
         img.onload = () => {
           try {
+            console.log('Image loaded successfully:', img.width, 'x', img.height);
+
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            if (!ctx) throw new Error('Canvas context not available');
+            if (!ctx) {
+              throw new Error('Canvas context not available');
+            }
 
             // Set consistent dimensions
             canvas.width = 256;
@@ -112,8 +125,10 @@ export async function extractFaceFeatures(imageData: string): Promise<FaceFeatur
             const imageDataObj = ctx.getImageData(0, 0, 256, 256);
             const pixels = imageDataObj.data;
 
+            console.log('Image processed, pixel data length:', pixels.length);
+
             // Generate deterministic hash from image data
-            const hashData = new Uint8Array(pixels.length / 4); // Use every 4th byte (alpha channel)
+            const hashData = new Uint8Array(pixels.length / 4);
             for (let i = 0; i < pixels.length; i += 4) {
               hashData[i / 4] = pixels[i]; // Use red channel
             }
@@ -122,25 +137,33 @@ export async function extractFaceFeatures(imageData: string): Promise<FaceFeatur
               const hashArray = Array.from(new Uint8Array(hashBuffer));
               const hash = BigInt('0x' + hashArray.slice(0, 31).map(b => b.toString(16).padStart(2, '0')).join(''));
 
+              console.log('Face hash generated successfully');
+
               resolve({
                 landmarks: new Array(136).fill(0).map((_, i) => Math.sin(i * 0.1) * 100),
                 embedding: new Array(128).fill(0).map((_, i) => Math.cos(i * 0.2)),
                 hash: hash.toString()
               });
-            }).catch(reject);
+            }).catch(hashError => {
+              console.error('Hash generation error:', hashError);
+              reject(new Error(`Hash generation failed: ${hashError.message}`));
+            });
           } catch (canvasError) {
-            reject(canvasError);
+            console.error('Canvas processing error:', canvasError);
+            reject(new Error(`Canvas processing failed: ${canvasError.message}`));
           }
         };
 
-        img.onerror = () => {
-          reject(new Error('Failed to load image for processing'));
-        };
-
-        // Set the source to trigger loading
+        // Set the source to trigger loading - do this after setting up event handlers
         img.src = processedImageData;
+
+        // Add timeout to prevent hanging
+        setTimeout(() => {
+          reject(new Error('Image loading timed out after 10 seconds'));
+        }, 10000);
       });
     } catch (fallbackError) {
+      console.error('Fallback feature extraction error:', fallbackError);
       throw new Error(`Face feature extraction failed: ${fallbackError.message}`);
     }
   }
