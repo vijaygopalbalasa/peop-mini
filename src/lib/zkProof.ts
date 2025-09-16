@@ -80,31 +80,66 @@ export async function extractFaceFeatures(imageData: string): Promise<FaceFeatur
 
     // Fallback to simpler but still deterministic feature extraction
     try {
-      const response = await fetch(imageData);
-      const blob = await response.blob();
-      const imageBitmap = await createImageBitmap(blob);
+      // Convert base64 data URL to proper format if needed
+      let processedImageData = imageData;
+      if (imageData.startsWith('data:image/')) {
+        // It's already a data URL, use it directly
+        processedImageData = imageData;
+      } else {
+        // Convert to data URL if it's raw data
+        processedImageData = `data:image/jpeg;base64,${imageData}`;
+      }
 
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Canvas context not available');
+      // Create an image element instead of using fetch for better browser compatibility
+      const img = new Image();
+      img.crossOrigin = 'anonymous'; // Handle CORS if needed
 
-      canvas.width = 256; // Standardized size for consistent hashing
-      canvas.height = 256;
-      ctx.drawImage(imageBitmap, 0, 0, 256, 256);
+      return new Promise<FaceFeatures>((resolve, reject) => {
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) throw new Error('Canvas context not available');
 
-      const imageDataObj = ctx.getImageData(0, 0, 256, 256);
-      const pixels = imageDataObj.data;
+            // Set consistent dimensions
+            canvas.width = 256;
+            canvas.height = 256;
 
-      // Generate deterministic hash from standardized image data
-      const hashBuffer = await crypto.subtle.digest('SHA-256', pixels);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hash = BigInt('0x' + hashArray.slice(0, 31).map(b => b.toString(16).padStart(2, '0')).join(''));
+            // Draw image to canvas with scaling
+            ctx.drawImage(img, 0, 0, 256, 256);
 
-      return {
-        landmarks: new Array(136).fill(0).map((_, i) => Math.sin(i * 0.1) * 100), // Generate deterministic landmarks
-        embedding: new Array(128).fill(0).map((_, i) => Math.cos(i * 0.2)), // Generate deterministic embedding
-        hash: hash.toString()
-      };
+            // Get image data
+            const imageDataObj = ctx.getImageData(0, 0, 256, 256);
+            const pixels = imageDataObj.data;
+
+            // Generate deterministic hash from image data
+            const hashData = new Uint8Array(pixels.length / 4); // Use every 4th byte (alpha channel)
+            for (let i = 0; i < pixels.length; i += 4) {
+              hashData[i / 4] = pixels[i]; // Use red channel
+            }
+
+            crypto.subtle.digest('SHA-256', hashData).then(hashBuffer => {
+              const hashArray = Array.from(new Uint8Array(hashBuffer));
+              const hash = BigInt('0x' + hashArray.slice(0, 31).map(b => b.toString(16).padStart(2, '0')).join(''));
+
+              resolve({
+                landmarks: new Array(136).fill(0).map((_, i) => Math.sin(i * 0.1) * 100),
+                embedding: new Array(128).fill(0).map((_, i) => Math.cos(i * 0.2)),
+                hash: hash.toString()
+              });
+            }).catch(reject);
+          } catch (canvasError) {
+            reject(canvasError);
+          }
+        };
+
+        img.onerror = () => {
+          reject(new Error('Failed to load image for processing'));
+        };
+
+        // Set the source to trigger loading
+        img.src = processedImageData;
+      });
     } catch (fallbackError) {
       throw new Error(`Face feature extraction failed: ${fallbackError.message}`);
     }
@@ -302,9 +337,40 @@ function extractTextureFeatures(pixels: Uint8ClampedArray, width: number, height
 }
 
 /**
- * Generate ZK-SNARK proof using the FaceHashVerifier circuit
+ * Get user's first transaction hash for ZK circuit
  */
-export async function generateZKProof(faceHash: string): Promise<ZKProofResult> {
+async function getUserFirstTxHash(userAddress: string): Promise<string> {
+  try {
+    // Query Base network for user's first transaction via API route to hide API key
+    const response = await fetch('/api/get-first-tx', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address: userAddress })
+    });
+    const data = await response.json();
+
+    if (response.ok && data.txHash) {
+      return data.txHash;
+    }
+
+    // Fallback: use a deterministic hash based on address
+    const addressHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(userAddress.toLowerCase()));
+    const hashArray = Array.from(new Uint8Array(addressHash));
+    return '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch (error) {
+    console.warn('Failed to fetch first transaction, using address-based hash:', error);
+
+    // Fallback: use a deterministic hash based on address
+    const addressHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(userAddress.toLowerCase()));
+    const hashArray = Array.from(new Uint8Array(addressHash));
+    return '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+}
+
+/**
+ * Generate ZK-SNARK proof using the PoEP circuit
+ */
+export async function generateZKProof(faceHash: string, userAddress?: string): Promise<ZKProofResult> {
   try {
     // Check if snarkjs is available
     if (typeof window === 'undefined' || !window.snarkjs) {
@@ -339,9 +405,23 @@ export async function generateZKProof(faceHash: string): Promise<ZKProofResult> 
       nonceBigInt = nonceBigInt % fieldSize;
     }
 
-    // Circuit input pattern based on simple.circom (2 inputs: faceHash, nonce)
+    // Get user's actual first transaction hash for production security
+    if (!userAddress) {
+      throw new Error('User address is required for ZK proof generation');
+    }
+
+    const firstTxHash = await getUserFirstTxHash(userAddress);
+    let firstTxHashBigInt = BigInt(firstTxHash);
+
+    // Reduce to field size if necessary
+    if (firstTxHashBigInt >= fieldSize) {
+      firstTxHashBigInt = firstTxHashBigInt % fieldSize;
+    }
+
+    // Circuit input pattern based on PoEPCircuit (3 inputs: faceHash, firstTxHash, nonce)
     const inputs = {
       faceHash: faceHashBigInt.toString(),
+      firstTxHash: firstTxHashBigInt.toString(),
       nonce: nonceBigInt.toString()
     };
 

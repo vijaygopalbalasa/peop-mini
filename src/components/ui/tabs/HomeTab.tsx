@@ -147,7 +147,10 @@ export function HomeTab() {
       // Step 2: Generate ZK proof
       let proof: ZKProofResult;
       try {
-        proof = await generateZKProof(faceHash);
+        if (!address) {
+          throw new Error('Wallet address is required for ZK proof generation');
+        }
+        proof = await generateZKProof(faceHash, address);
         setZkProof(proof);
       } catch (err) {
         throw new Error(`ZK proof generation failed: ${(err as Error).message}`);
@@ -187,7 +190,10 @@ export function HomeTab() {
   const mintPoEPNFT = async (proof: ZKProofResult) => {
     try {
       // Generate contract-compatible ZK proof using the same face hash
-      const contractProof = await contractGenerateZKProof(proof.faceHash, proof.nonce);
+      if (!address) {
+        throw new Error('Wallet address is required for contract proof generation');
+      }
+      const contractProof = await contractGenerateZKProof(proof.faceHash, proof.nonce, address);
 
       // Validate wallet connection before minting
       if (!address) {
