@@ -88,7 +88,7 @@ const getWagmiConfig = () => {
     }
 
     wagmiConfigInstance = createConfig({
-      chains: [base, baseSepolia],
+      chains: [baseSepolia, base], // Sepolia first for testing
       connectors,
       multiInjectedProviderDiscovery: false, // Prevent discovery conflicts
       ssr: true,

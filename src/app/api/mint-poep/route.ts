@@ -4,7 +4,9 @@ import { rateLimit } from '~/lib/rateLimit';
 
 const POEP_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_POEP_CONTRACT_ADDRESS;
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
-const BASE_RPC_URL = process.env.BASE_RPC_URL || 'https://mainnet.base.org';
+const BASE_RPC_URL = process.env.NODE_ENV === 'production'
+  ? (process.env.BASE_RPC_URL || 'https://mainnet.base.org')
+  : (process.env.BASE_SEPOLIA_RPC || 'https://sepolia.base.org');
 
 // Rate limiting configuration
 const limiter = rateLimit({
