@@ -76,31 +76,7 @@ export async function extractFaceFeatures(imageData: string): Promise<FaceFeatur
       hash: hash.toString()
     };
   } catch (error) {
-    // Advanced face detection failed, using fallback method
-
-    // Fallback to deterministic hash method
-    const encoder = new TextEncoder();
-    const data = encoder.encode(imageData);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hash = BigInt('0x' + hashArray.slice(0, 31).map(b => b.toString(16).padStart(2, '0')).join(''));
-
-    // Generate deterministic landmarks and embedding from hash
-    const landmarks = Array.from({ length: 68 }, (_, i) => {
-      const seed = (parseInt(hash.toString().slice(i % 10, i % 10 + 4)) || 1) / 10000;
-      return Math.sin(seed * Math.PI * 2) * 100;
-    });
-
-    const embedding = Array.from({ length: 128 }, (_, i) => {
-      const seed = (parseInt(hash.toString().slice((i * 2) % 10, (i * 2) % 10 + 4)) || 1) / 10000;
-      return Math.cos(seed * Math.PI * 2) * 1000;
-    });
-
-    return {
-      landmarks,
-      embedding,
-      hash: hash.toString()
-    };
+    throw new Error('Face feature extraction failed. Proper biometric analysis required for production PoEP.');
   }
 }
 
