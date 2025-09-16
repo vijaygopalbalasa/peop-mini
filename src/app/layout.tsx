@@ -11,7 +11,16 @@ export default function RootLayout({
     <Providers>
       <html lang="en">
         <head>
+          {/* Security headers */}
+          <meta httpEquiv="X-Content-Type-Options" content="nosniff" />
+          <meta httpEquiv="X-Frame-Options" content="SAMEORIGIN" />
+          <meta httpEquiv="X-XSS-Protection" content="1; mode=block" />
+          <meta httpEquiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+
+          {/* Load snarkjs library */}
           <script defer src="/snarkjs.min.js"></script>
+
+          {/* MiniKit initialization */}
           <script dangerouslySetInnerHTML={{
             __html: `
               // Prevent ethereum property redefinition errors

@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
+import { useAccount } from 'wagmi';
 import { useMiniKit } from '@coinbase/onchainkit/minikit';
 import { Button } from '../Button';
+import { WalletConnector } from '../../WalletConnector';
 import { generateFaceHash, generateZKProof, type ZKProofResult } from '~/lib/zkProof';
 import { generateZKProof as contractGenerateZKProof } from '~/lib/contract';
 
@@ -38,18 +40,25 @@ export function HomeTab() {
   const [userTrustScore, setUserTrustScore] = useState<number>(0);
   const [hasExistingPassport, setHasExistingPassport] = useState<boolean>(false);
   const [mounted, setMounted] = useState(false);
+  const [walletConnected, setWalletConnected] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   // Base MiniKit integration
   const { context } = useMiniKit();
   const user = context?.user;
-  const client = context?.client;
+  // Wallet integration
+  const { address, isConnected } = useAccount();
 
   // Handle client-side mounting
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Update wallet connection state
+  useEffect(() => {
+    setWalletConnected(isConnected);
+  }, [isConnected]);
 
   // Check for existing passport when component mounts
   useEffect(() => {
@@ -89,7 +98,8 @@ export function HomeTab() {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
-    } catch (_err) {
+    } catch (err) {
+      console.warn('Camera access error:', err);
       setError('Camera access denied. Please allow camera permissions.');
       setCurrentStep(PoEPStep.Error);
     }
@@ -123,22 +133,52 @@ export function HomeTab() {
 
   const processImage = async (imageData: string) => {
     setCurrentStep(PoEPStep.Processing);
+    setError(null);
 
     try {
-      // Convert image to face hash using proper biometric feature extraction
-      const faceHash = await generateFaceHash(imageData);
+      // Step 1: Convert image to face hash
+      let faceHash: string;
+      try {
+        faceHash = await generateFaceHash(imageData);
+      } catch (err) {
+        throw new Error(`Face analysis failed: ${(err as Error).message}`);
+      }
 
-      // Generate ZK proof using the FaceHashVerifier circuit
-      const proof = await generateZKProof(faceHash);
-      setZkProof(proof);
+      // Step 2: Generate ZK proof
+      let proof: ZKProofResult;
+      try {
+        proof = await generateZKProof(faceHash);
+        setZkProof(proof);
+      } catch (err) {
+        throw new Error(`ZK proof generation failed: ${(err as Error).message}`);
+      }
 
-      // Mint soul-bound NFT with the ZK proof
-      await mintPoEPNFT(proof);
+      // Step 3: Mint soul-bound NFT
+      try {
+        await mintPoEPNFT(proof);
+      } catch (err) {
+        throw new Error(`NFT minting failed: ${(err as Error).message}`);
+      }
 
       setCurrentStep(PoEPStep.Success);
-    } catch (err) {
-      console.error('Processing failed:', err);
-      setError(`Failed to process image or generate proof: ${(err as Error).message}`);
+    } catch (err: any) {
+      console.error('PoEP creation failed:', err);
+
+      let errorMessage = 'Failed to create PoEP';
+      if (err.message) {
+        errorMessage = err.message;
+      }
+
+      // Add helpful suggestions based on error type
+      if (err.message?.includes('Camera')) {
+        errorMessage += '\n\nTip: Please allow camera permissions and ensure good lighting.';
+      } else if (err.message?.includes('ZK proof')) {
+        errorMessage += '\n\nTip: This may be due to network issues. Please check your connection and try again.';
+      } else if (err.message?.includes('minting')) {
+        errorMessage += '\n\nTip: Check your wallet connection and ensure you have enough ETH for gas fees.';
+      }
+
+      setError(errorMessage);
       setCurrentStep(PoEPStep.Error);
     }
   };
@@ -149,6 +189,11 @@ export function HomeTab() {
       // Generate contract-compatible ZK proof using the same face hash
       const contractProof = await contractGenerateZKProof(proof.faceHash, proof.nonce);
 
+      // Validate wallet connection before minting
+      if (!address) {
+        throw new Error('Wallet not connected. Please connect your wallet first.');
+      }
+
       // Submit the ZK proof to the PoEP smart contract on Base
       const response = await fetch('/api/mint-poep', {
         method: 'POST',
@@ -156,7 +201,7 @@ export function HomeTab() {
         body: JSON.stringify({
           proof: contractProof,
           nullifier: proof.nullifier.toString(), // Convert BigInt to string
-          userFid: context?.user?.fid
+          userAddress: address // Use the connected wallet address
         })
       });
 
@@ -226,16 +271,37 @@ export function HomeTab() {
             </div>
           </div>
 
-          <Button
-            onClick={startCamera}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg"
-          >
-            Create PoEP
-          </Button>
+          {!walletConnected ? (
+            <div className="space-y-4">
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <p className="text-blue-800 font-semibold">Step 1: Connect Wallet</p>
+                <p className="text-sm text-blue-600">
+                  Connect your wallet to create your PoEP
+                </p>
+              </div>
+              <WalletConnector onConnectionChange={setWalletConnected} />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                <p className="text-green-800 font-semibold">Step 2: Create PoEP</p>
+                <p className="text-sm text-green-600">
+                  Wallet connected • Ready to create your passport
+                </p>
+              </div>
 
-          <p className="text-xs text-gray-500">
-            Camera never leaves your device • Privacy guaranteed
-          </p>
+              <Button
+                onClick={startCamera}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg"
+              >
+                📸 Create PoEP
+              </Button>
+
+              <p className="text-xs text-gray-500">
+                Camera never leaves your device • Privacy guaranteed
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -346,15 +412,29 @@ export function HomeTab() {
   const renderError = () => (
     <div className="text-center space-y-4">
       <div className="text-4xl">❌</div>
-      <h3 className="text-lg font-semibold text-red-600">Error</h3>
-      <p className="text-sm text-gray-600">{error}</p>
+      <h3 className="text-lg font-semibold text-red-600">Something went wrong</h3>
 
-      <Button
-        onClick={resetFlow}
-        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
-      >
-        Try Again
-      </Button>
+      <div className="bg-red-50 p-4 rounded-lg border border-red-200 text-left">
+        <div className="text-sm text-red-800 whitespace-pre-wrap">
+          {error}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Button
+          onClick={resetFlow}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
+        >
+          🔄 Try Again
+        </Button>
+
+        <div className="text-xs text-gray-500 space-y-1">
+          <p>If the problem persists:</p>
+          <p>• Refresh the page</p>
+          <p>• Check your internet connection</p>
+          <p>• Ensure your wallet has sufficient ETH</p>
+        </div>
+      </div>
     </div>
   );
 
