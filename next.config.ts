@@ -25,15 +25,16 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            // Allow embedding and external resources
+            // Allow embedding and external resources with comprehensive wallet service support
             value: `
               default-src 'self';
-              script-src 'self' 'unsafe-inline' 'unsafe-eval' https://pulse.walletconnect.org https://cca-lite.coinbase.com;
-              connect-src 'self' https://api.basescan.org https://mainnet.base.org https://sepolia.base.org https://pulse.walletconnect.org https://cca-lite.coinbase.com wss://* https://*.coinbase.com https://*.walletconnect.org https://*.walletconnect.com;
-              img-src 'self' data: blob: https:;
+              script-src 'self' 'unsafe-inline' 'unsafe-eval' https://pulse.walletconnect.org https://cca-lite.coinbase.com https://*.walletconnect.org https://*.coinbase.com;
+              connect-src 'self' https://api.basescan.org https://mainnet.base.org https://sepolia.base.org https://pulse.walletconnect.org https://cca-lite.coinbase.com wss://* https://*.coinbase.com https://*.walletconnect.org https://*.walletconnect.com https://relay.walletconnect.org https://relay.walletconnect.com https://rpc.walletconnect.org https://explorer-api.walletconnect.com https://notify.walletconnect.com;
+              img-src 'self' data: blob: https: https://*.walletconnect.org https://*.coinbase.com;
               style-src 'self' 'unsafe-inline';
               font-src 'self' data:;
               frame-ancestors 'self' https://warpcast.com https://*.warpcast.com https://*.farcaster.xyz https://*.base.org https://base.org https://www.base.dev https://*.base.dev https://coinbase.com https://*.coinbase.com https://wallet.coinbase.com https://*.wallet.coinbase.com http://localhost:* https://localhost:*;
+              frame-src 'self' https://*.walletconnect.org https://*.coinbase.com;
               object-src 'none';
               base-uri 'self';
             `.replace(/\s+/g, ' ').trim(),
