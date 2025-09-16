@@ -19,25 +19,44 @@ export default function RootLayout({
           {/* Load snarkjs library */}
           <script defer src="/snarkjs.min.js"></script>
 
-          {/* MiniKit initialization */}
+          {/* Prevent ethereum property conflicts */}
           <script dangerouslySetInnerHTML={{
             __html: `
-              // MiniKit ready function - don't interfere with ethereum provider
-              if (typeof window !== 'undefined') {
-                if (!window.minikit) {
-                  window.minikit = {};
-                }
-                window.minikit.ready = function() {
-                  console.log('MiniKit ready called');
-                  if (window.parent && window.parent !== window) {
+              // Prevent multiple providers from conflicting
+              (function() {
+                if (typeof window !== 'undefined') {
+                  // Make ethereum property configurable if it exists
+                  if (window.ethereum) {
                     try {
-                      window.parent.postMessage({ type: 'minikit-ready' }, '*');
+                      Object.defineProperty(window, 'ethereum', {
+                        value: window.ethereum,
+                        writable: true,
+                        configurable: true
+                      });
                     } catch (e) {
-                      console.warn('MiniKit ready message failed:', e);
+                      // Property already non-configurable, use fallback
+                      const originalEthereum = window.ethereum;
+                      delete window.ethereum;
+                      window.ethereum = originalEthereum;
                     }
                   }
-                };
-              }
+
+                  // MiniKit ready function
+                  if (!window.minikit) {
+                    window.minikit = {};
+                  }
+                  window.minikit.ready = function() {
+                    console.log('MiniKit ready called');
+                    if (window.parent && window.parent !== window) {
+                      try {
+                        window.parent.postMessage({ type: 'minikit-ready' }, '*');
+                      } catch (e) {
+                        console.warn('MiniKit ready message failed:', e);
+                      }
+                    }
+                  };
+                }
+              })();
             `
           }} />
         </head>
