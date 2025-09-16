@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
 
     // Connect to Base network
     console.log('Connecting to Base network...');
-    let provider, wallet, contract;
+    let provider, wallet, contract, normalizedAddress;
 
     try {
       provider = new ethers.JsonRpcProvider(BASE_RPC_URL);
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
       console.log('Contract instance created');
 
       // Normalize the user address
-      const normalizedAddress = ethers.getAddress(userAddress);
+      normalizedAddress = ethers.getAddress(userAddress);
       console.log('Normalized address:', normalizedAddress);
 
       // Check if user already has a PoEP using balanceOf

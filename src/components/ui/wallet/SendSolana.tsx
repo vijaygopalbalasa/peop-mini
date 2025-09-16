@@ -1,112 +1,17 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { useConnection as useSolanaConnection, useWallet as useSolanaWallet } from '@solana/wallet-adapter-react';
-import { PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
-import { Button } from "../Button";
-import { truncateAddress } from "../../../lib/truncateAddress";
-import { renderError } from "../../../lib/errorUtils";
-
 /**
- * SendSolana component handles sending SOL transactions on Solana.
- * 
- * This component provides a simple interface for users to send SOL transactions
- * using their connected Solana wallet. It includes transaction status tracking
- * and error handling.
- * 
- * Features:
- * - SOL transaction sending
- * - Transaction status tracking
- * - Error handling and display
- * - Loading state management
- * 
- * Note: This component is a placeholder implementation. In a real application,
- * you would integrate with a Solana wallet adapter and transaction library
- * like @solana/web3.js to handle actual transactions.
- * 
- * @example
- * ```tsx
- * <SendSolana />
- * ```
+ * SendSolana component placeholder.
+ *
+ * This component was removed as PoEP is focused on Ethereum/Base chains only.
+ * All Solana functionality has been removed in favor of the main PoEP flow.
+ *
+ * For wallet functionality, use the main PoEP creation flow in HomeTab.
  */
 export function SendSolana() {
-  const [solanaTransactionState, setSolanaTransactionState] = useState<
-    | { status: 'none' }
-    | { status: 'pending' }
-    | { status: 'error'; error: Error }
-    | { status: 'success'; signature: string }
-  >({ status: 'none' });
-
-  const { connection: solanaConnection } = useSolanaConnection();
-  const { sendTransaction, publicKey } = useSolanaWallet();
-
-  const recipientAddress = process.env.NEXT_PUBLIC_SOLANA_RECIPIENT_ADDRESS;
-
-  if (!recipientAddress) {
-    throw new Error('NEXT_PUBLIC_SOLANA_RECIPIENT_ADDRESS environment variable is required');
-  }
-
-  /**
-   * Handles sending the Solana transaction
-   */
-  const sendSolanaTransaction = useCallback(async () => {
-    setSolanaTransactionState({ status: 'pending' });
-    try {
-      if (!publicKey) {
-        throw new Error('no Solana publicKey');
-      }
-
-      const { blockhash } = await solanaConnection.getLatestBlockhash();
-      if (!blockhash) {
-        throw new Error('failed to fetch latest Solana blockhash');
-      }
-
-      const fromPubkeyStr = publicKey.toBase58();
-      const toPubkeyStr = recipientAddress;
-      const transaction = new Transaction();
-      transaction.add(
-        SystemProgram.transfer({
-          fromPubkey: new PublicKey(fromPubkeyStr),
-          toPubkey: new PublicKey(toPubkeyStr),
-          lamports: 0n,
-        }),
-      );
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = new PublicKey(fromPubkeyStr);
-
-      const simulation = await solanaConnection.simulateTransaction(transaction);
-      if (simulation.value.err) {
-        // Gather logs and error details for debugging
-        const logs = simulation.value.logs?.join('\n') ?? 'No logs';
-        const errDetail = JSON.stringify(simulation.value.err);
-        throw new Error(`Simulation failed: ${errDetail}\nLogs:\n${logs}`);
-      }
-      const signature = await sendTransaction(transaction, solanaConnection);
-      setSolanaTransactionState({ status: 'success', signature });
-    } catch (e) {
-      if (e instanceof Error) {
-        setSolanaTransactionState({ status: 'error', error: e });
-      } else {
-        setSolanaTransactionState({ status: 'none' });
-      }
-    }
-  }, [sendTransaction, publicKey, solanaConnection]);
-
   return (
-    <>
-      <Button
-        onClick={sendSolanaTransaction}
-        disabled={solanaTransactionState.status === 'pending'}
-        className="mb-4"
-      >
-        Send Transaction (sol)
-      </Button>
-      {solanaTransactionState.status === 'error' && renderError(solanaTransactionState.error)}
-      {solanaTransactionState.status === 'success' && (
-        <div className="mt-2 text-xs">
-          <div>Hash: {truncateAddress(solanaTransactionState.signature)}</div>
-        </div>
-      )}
-    </>
+    <div className="text-center text-gray-500 text-sm">
+      Solana functionality removed - use PoEP creation flow
+    </div>
   );
-} 
+}
