@@ -356,30 +356,30 @@ export function HomeTab() {
   const handleTransactionSuccess = async (txHash: string) => {
     setTransactionHash(txHash);
 
-    // Wait a moment for transaction to be processed
-    await new Promise(resolve => setTimeout(resolve, 3000));
-
-    // Check if user now has a passport
-    try {
-      const response = await fetch(`/api/check-poep?address=${address}`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.hasPoEP) {
-          setHasExistingPassport(true);
-          setUserTrustScore(data.trustScore || 100);
-          setTokenId(data.tokenId);
-          setCurrentStep(PoEPStep.Success);
-          return;
-        }
-      }
-    } catch (error) {
-      console.warn('Failed to verify passport status:', error);
-    }
-
-    // Default success state if verification fails
+    // Set initial state immediately for better UX
     setHasExistingPassport(true);
-    setUserTrustScore(100);
+    setUserTrustScore(1); // Start with contract's initial score of 1
     setCurrentStep(PoEPStep.Success);
+
+    // Background verification - get real score from blockchain
+    setTimeout(async () => {
+      try {
+        // Wait for blockchain confirmation
+        await new Promise(resolve => setTimeout(resolve, 5000));
+
+        const response = await fetch(`/api/check-poep?address=${address}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.hasPoEP) {
+            // Update with actual trust score from blockchain
+            setUserTrustScore(data.trustScore || 1);
+            setTokenId(data.tokenId);
+          }
+        }
+      } catch (error) {
+        console.warn('Background verification failed:', error);
+      }
+    }, 100);
   };
 
   const renderExistingPassport = () => (
@@ -424,22 +424,25 @@ export function HomeTab() {
         <h4 className="font-semibold mb-4 text-center">How PoEP Grows</h4>
         <div className="space-y-3 text-sm">
           <p className="text-neutral-600 dark:text-neutral-300">
-            Your trust score increases automatically with every Base transaction:
+            Your trust score can grow with Base activity:
           </p>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span>• Swaps, casts, stakes</span>
-              <span className="status-success">+1 point each</span>
+              <span>• Swaps, DeFi transactions</span>
+              <span className="text-neutral-400">Future updates</span>
             </div>
             <div className="flex items-center justify-between">
-              <span>• NFT mints</span>
-              <span className="status-success">+2 points</span>
+              <span>• NFT mints & trades</span>
+              <span className="text-neutral-400">Future updates</span>
             </div>
             <div className="flex items-center justify-between">
-              <span>• Complex DeFi</span>
-              <span className="status-success">+3 points</span>
+              <span>• Community activity</span>
+              <span className="text-neutral-400">Future updates</span>
             </div>
           </div>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-3">
+            💡 Trust score updates require indexer service (coming soon)
+          </p>
         </div>
       </div>
 
@@ -713,16 +716,26 @@ export function HomeTab() {
         </div>
       </div>
 
-      {/* OnchainKit Transaction Component */}
+      {/* Auto-Transaction Component - More User Friendly */}
       {contractCallData && (
         <div className="card-primary p-6">
+          <div className="text-center space-y-4 mb-6">
+            <div className="w-16 h-16 mx-auto bg-gradient-to-br from-success-500 to-success-600 rounded-full flex items-center justify-center text-2xl animate-pulse">
+              ⚡
+            </div>
+            <h4 className="font-semibold text-primary-800 dark:text-primary-200">Ready to Mint Your PoEP!</h4>
+            <p className="text-sm text-primary-600 dark:text-primary-300">
+              Click the button below to create your unique Proof-of-Existence Passport
+            </p>
+          </div>
+
           <Transaction
             calls={[{
               to: contractCallData.to,
               data: contractCallData.data,
               value: BigInt(contractCallData.value)
             }]}
-            chainId={base.id} // Always use Base mainnet
+            chainId={base.id}
             onSuccess={(response) => {
               const txHash = response.transactionReceipts?.[0]?.transactionHash;
               if (txHash) {
@@ -735,26 +748,36 @@ export function HomeTab() {
             onError={(error) => {
               let errorMessage = 'Transaction failed';
               if (error.message?.includes('User rejected')) {
-                errorMessage = 'Transaction was rejected. Please try again and approve the transaction in your wallet.';
+                errorMessage = 'Please approve the transaction in your wallet to create your PoEP passport.';
               } else if (error.message?.includes('AlreadyMinted') || error.message?.includes('Already minted')) {
                 setHasExistingPassport(true);
+                setUserTrustScore(100);
                 setCurrentStep(PoEPStep.Success);
                 return;
               } else if (error.message?.includes('insufficient funds')) {
-                errorMessage = 'Insufficient ETH for gas fees. Please add more ETH to your wallet.';
+                errorMessage = 'You need more ETH for gas fees. The cost is very low on Base (~$0.01).';
               } else {
-                errorMessage = `Transaction failed: ${error.message}`;
+                errorMessage = `Minting failed: ${error.message}`;
               }
               setError(errorMessage);
               setCurrentStep(PoEPStep.Error);
             }}
           >
-            <TransactionButton className="w-full btn-primary" />
+            <TransactionButton
+              className="w-full btn-primary text-lg py-4 bg-gradient-to-r from-success-500 to-success-600 hover:from-success-600 hover:to-success-700"
+              text="🚀 Create My PoEP Passport"
+            />
             <TransactionStatus>
               <TransactionStatusLabel />
               <TransactionStatusAction />
             </TransactionStatus>
           </Transaction>
+
+          <div className="mt-4 text-center">
+            <p className="text-xs text-primary-500 dark:text-primary-400">
+              💰 Gas cost: ~$0.01 • ⚡ Fast on Base • 🔒 Soul-bound forever
+            </p>
+          </div>
         </div>
       )}
 
@@ -839,22 +862,25 @@ export function HomeTab() {
       <div className="card-accent p-6">
         <h4 className="font-semibold text-accent-800 dark:text-accent-200 mb-4 text-center">How PoEP Grows</h4>
         <p className="text-sm text-accent-600 dark:text-accent-300 mb-4 text-center">
-          Your trust score increases automatically with every Base transaction:
+          Your trust score can grow with Base activity:
         </p>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm">• Swaps, casts, stakes</span>
-            <span className="status-success">+1 point each</span>
+            <span className="text-sm">• Swaps, DeFi transactions</span>
+            <span className="text-neutral-400">Future updates</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm">• NFT mints</span>
-            <span className="status-success">+2 points</span>
+            <span className="text-sm">• NFT mints & trades</span>
+            <span className="text-neutral-400">Future updates</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm">• Complex DeFi</span>
-            <span className="status-success">+3 points</span>
+            <span className="text-sm">• Community activity</span>
+            <span className="text-neutral-400">Future updates</span>
           </div>
         </div>
+        <p className="text-xs text-accent-500 dark:text-accent-400 mt-3 text-center">
+          💡 Trust score updates require indexer service (coming soon)
+        </p>
       </div>
 
       {/* Transaction Link - Primary Action for New Mints */}
