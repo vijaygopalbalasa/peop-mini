@@ -13,47 +13,56 @@ export function Header({ user }: HeaderProps) {
 
   return (
     <div className="relative">
-      <div 
-        className="mt-4 mb-4 mx-4 px-2 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-between border-[3px] border-double border-primary"
-      >
-        <div className="text-lg font-light">
-          Welcome to {APP_NAME}!
+      <div className="mt-6 mb-6 mx-4 px-6 py-4 card flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="w-3 h-3 bg-gradient-to-r from-primary-500 to-accent-500 rounded-full animate-pulse"></div>
+          <div>
+            <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
+              {APP_NAME}
+            </h1>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">Your onchain identity passport</p>
+          </div>
         </div>
         {user && (
-          <div 
-            className="cursor-pointer"
+          <div
+            className="cursor-pointer transition-transform duration-200 hover:scale-105"
             onClick={() => {
               setIsUserDropdownOpen(!isUserDropdownOpen);
             }}
           >
             {user.pfpUrl && (
-              <img 
-                src={user.pfpUrl} 
-                alt="Profile" 
-                className="w-10 h-10 rounded-full border-2 border-primary"
-              />
+              <div className="relative">
+                <img
+                  src={user.pfpUrl}
+                  alt="Profile"
+                  className="w-12 h-12 rounded-full border-2 border-primary-200 shadow-lg"
+                />
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-success-500 rounded-full border-2 border-white dark:border-neutral-900"></div>
+              </div>
             )}
           </div>
         )}
       </div>
       {user && (
-        <>      
+        <>
           {isUserDropdownOpen && (
-            <div className="absolute top-full right-0 z-50 w-fit mt-1 mx-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
-              <div className="p-3 space-y-2">
+            <div className="absolute top-full right-0 z-50 w-64 mt-1 mx-4 card animate-in slide-in-from-top-2 duration-200">
+              <div className="p-4 space-y-3">
                 <div className="text-right">
-                  <h3 
-                    className="font-bold text-sm hover:underline cursor-pointer inline-block"
+                  <h3
+                    className="font-bold text-lg hover:text-primary-600 cursor-pointer transition-colors duration-200 inline-block"
                     onClick={() => sdk.actions.viewProfile({ fid: user.fid })}
                   >
                     {user.displayName || user.username}
                   </h3>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
                     @{user.username}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500">
-                    FID: {user.fid}
-                  </p>
+                  <div className="inline-flex items-center px-2 py-1 mt-1 bg-primary-50 dark:bg-primary-900/20 rounded-full">
+                    <span className="text-xs font-medium text-primary-700 dark:text-primary-300">
+                      FID: {user.fid}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

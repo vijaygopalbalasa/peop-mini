@@ -1,17 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
 
-const POEP_CONTRACT_ADDRESS = process.env.POEP_CONTRACT_ADDRESS;
-const BASE_RPC_URL = process.env.BASE_RPC_URL || 'https://mainnet.base.org';
+// Environment-specific contract addresses
+const isProduction = process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENVIRONMENT === 'production';
+
+const POEP_CONTRACT_ADDRESS = isProduction
+  ? process.env.NEXT_PUBLIC_POEP_CONTRACT_ADDRESS_MAINNET
+  : process.env.NEXT_PUBLIC_POEP_CONTRACT_ADDRESS_SEPOLIA;
+
+const BASE_RPC_URL = process.env.BASE_MAINNET_RPC || 'https://mainnet.base.org';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const fid = searchParams.get('fid');
+    const address = searchParams.get('address');
 
-    if (!fid) {
+    if (!address) {
       return NextResponse.json(
-        { error: 'FID parameter required' },
+        { error: 'Address parameter required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate and normalize the address
+    let normalizedAddress: string;
+    try {
+      normalizedAddress = ethers.getAddress(address);
+    } catch (_error) {
+      return NextResponse.json(
+        { error: 'Invalid address format' },
         { status: 400 }
       );
     }
@@ -23,40 +40,85 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    console.log('[CHECK-POEP] Checking PoEP status for:', normalizedAddress);
+    console.log('[CHECK-POEP] Contract address:', POEP_CONTRACT_ADDRESS);
+    console.log('[CHECK-POEP] RPC URL:', BASE_RPC_URL);
+
     // Connect to Base network
     const provider = new ethers.JsonRpcProvider(BASE_RPC_URL);
 
-    // Load contract ABI
+    // Load contract ABI with correct function signatures
     const contractABI = [
-      "function hasPoEP(address user) external view returns (bool)",
-      "function getTrustScore(address user) external view returns (uint256)",
-      "function getPoEPOwner(uint256 fid) external view returns (address)"
+      "function balanceOf(address owner) external view returns (uint256)",
+      "function viewTrustScore(address user) external view returns (uint256)",
+      "function tokenOfOwnerByIndex(address owner, uint256 index) external view returns (uint256)",
+      "function ownerOf(uint256 tokenId) external view returns (address)"
     ];
 
     const contract = new ethers.Contract(POEP_CONTRACT_ADDRESS, contractABI, provider);
 
-    // Get user address from FID (this would need proper resolution in production)
-    let userAddress: string;
+    // In PoEP contract, tokenId = uint256(uint160(userAddress))
+    // So we can directly check if the token exists for this address
+    const tokenId = BigInt(normalizedAddress);
+    console.log('[CHECK-POEP] Calculated tokenId:', tokenId.toString());
+
+    let hasPoEP = false;
+    let owner = null;
     try {
-      userAddress = await contract.getPoEPOwner(fid);
-    } catch {
-      // If no address found for FID, user doesn't have PoEP
-      return NextResponse.json({
-        hasPoEP: false,
-        trustScore: 0
-      });
+      // Try to get the owner of the tokenId derived from the address
+      owner = await contract.ownerOf(tokenId);
+      console.log('[CHECK-POEP] Owner of tokenId:', owner);
+      hasPoEP = owner.toLowerCase() === normalizedAddress.toLowerCase();
+      console.log('[CHECK-POEP] hasPoEP:', hasPoEP);
+    } catch (error) {
+      console.log('[CHECK-POEP] ownerOf failed (token does not exist):', error.message);
+      hasPoEP = false;
     }
 
-    // Check if user has PoEP and get trust score
-    const [hasPoEP, trustScore] = await Promise.all([
-      contract.hasPoEP(userAddress),
-      contract.getTrustScore(userAddress)
-    ]);
+    // Also check balanceOf for verification
+    console.log('[CHECK-POEP] Calling balanceOf...');
+    const balance = await contract.balanceOf(normalizedAddress);
+    console.log('[CHECK-POEP] Balance result:', balance.toString());
 
-    return NextResponse.json({
+    let trustScore = 0;
+    let returnTokenId = null;
+    if (hasPoEP) {
+      try {
+        // Get trust score using viewTrustScore (view function, no fee)
+        const score = await contract.viewTrustScore(normalizedAddress);
+        trustScore = parseInt(score.toString());
+        console.log('[CHECK-POEP] Trust score:', trustScore);
+
+        // Use the calculated tokenId (convert BigInt to string)
+        returnTokenId = tokenId.toString();
+      } catch (_error) {
+        console.log('[CHECK-POEP] Error fetching trust score:', _error.message);
+        // Default to 0 if can't fetch
+        trustScore = 0;
+        returnTokenId = null;
+      }
+    }
+
+    const result = {
       hasPoEP,
-      trustScore: trustScore.toString(),
-      userAddress
+      trustScore,
+      balance: balance.toString(),
+      tokenId: returnTokenId,
+      userAddress: normalizedAddress
+    };
+
+    console.log('[CHECK-POEP] Final result:', JSON.stringify(result, (key, value) =>
+      typeof value === 'bigint' ? value.toString() : value
+    ));
+
+    // Serialize the result with BigInt handling
+    const jsonString = JSON.stringify(result, (key, value) =>
+      typeof value === 'bigint' ? value.toString() : value
+    );
+
+    return new Response(jsonString, {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error) {

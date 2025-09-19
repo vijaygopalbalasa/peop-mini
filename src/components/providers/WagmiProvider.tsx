@@ -3,7 +3,7 @@
 import { farcasterMiniApp } from '@farcaster/miniapp-wagmi-connector';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WagmiProvider, createConfig, http } from 'wagmi';
-import { base, baseSepolia } from 'wagmi/chains';
+import { base } from 'wagmi/chains';
 import { useMemo, ReactNode } from 'react';
 import { coinbaseWallet, metaMask, walletConnect } from 'wagmi/connectors';
 
@@ -87,14 +87,16 @@ const getWagmiConfig = () => {
       }
     }
 
+    // Production chain configuration - always use Base mainnet
+    const chains = [base] as const;
+
     wagmiConfigInstance = createConfig({
-      chains: [baseSepolia, base], // Sepolia first for testing
+      chains,
       connectors,
       multiInjectedProviderDiscovery: false, // Prevent discovery conflicts
       ssr: true,
       transports: {
-        [base.id]: http('https://mainnet.base.org'),
-        [baseSepolia.id]: http('https://sepolia.base.org'),
+        [base.id]: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org'),
       },
     });
 

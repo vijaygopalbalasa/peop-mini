@@ -118,10 +118,74 @@ export const BASE_SEPOLIA_CHAIN_ID = 84532;
 export const POEP_CONTRACT_ABI = [
     {
         "inputs": [
-            { "internalType": "uint256[2]", "name": "_pA", "type": "uint256[2]" },
-            { "internalType": "uint256[2][2]", "name": "_pB", "type": "uint256[2][2]" },
-            { "internalType": "uint256[2]", "name": "_pC", "type": "uint256[2]" },
-            { "internalType": "uint256", "name": "_nullifier", "type": "uint256" }
+            {
+                "internalType": "string",
+                "name": "baseURI",
+                "type": "string"
+            },
+            {
+                "internalType": "address",
+                "name": "verifierAddress",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "owner",
+                "type": "address"
+            }
+        ],
+        "name": "balanceOf",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+            }
+        ],
+        "name": "burn",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256[2]",
+                "name": "_pA",
+                "type": "uint256[2]"
+            },
+            {
+                "internalType": "uint256[2][2]",
+                "name": "_pB",
+                "type": "uint256[2][2]"
+            },
+            {
+                "internalType": "uint256[2]",
+                "name": "_pC",
+                "type": "uint256[2]"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_nullifier",
+                "type": "uint256"
+            }
         ],
         "name": "mint",
         "outputs": [],
@@ -129,39 +193,120 @@ export const POEP_CONTRACT_ABI = [
         "type": "function"
     },
     {
-        "inputs": [{ "internalType": "address", "name": "user", "type": "address" }],
-        "name": "viewTrustScore",
-        "outputs": [{ "internalType": "uint256", "name": "score", "type": "uint256" }],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [{ "internalType": "uint256", "name": "tokenId", "type": "uint256" }],
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+            }
+        ],
         "name": "ownerOf",
-        "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
         "stateMutability": "view",
         "type": "function"
     },
     {
-        "inputs": [{ "internalType": "uint256", "name": "tokenId", "type": "uint256" }],
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "user",
+                "type": "address"
+            }
+        ],
+        "name": "getTrustScore",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "score",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "payable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+            }
+        ],
         "name": "tokenURI",
-        "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
         "stateMutability": "view",
         "type": "function"
     },
     {
-        "inputs": [{ "internalType": "address", "name": "owner", "type": "address" }],
-        "name": "balanceOf",
-        "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "user",
+                "type": "address"
+            }
+        ],
+        "name": "viewTrustScore",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "score",
+                "type": "uint256"
+            }
+        ],
         "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "user",
+                "type": "address"
+            },
+            {
+                "internalType": "int256",
+                "name": "delta",
+                "type": "int256"
+            }
+        ],
+        "name": "updateScore",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
     },
     {
         "anonymous": false,
         "inputs": [
-            { "indexed": true, "internalType": "address", "name": "user", "type": "address" },
-            { "indexed": true, "internalType": "uint256", "name": "tokenId", "type": "uint256" },
-            { "indexed": false, "internalType": "uint256", "name": "nullifier", "type": "uint256" }
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "user",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "nullifier",
+                "type": "uint256"
+            }
         ],
         "name": "PassportMinted",
         "type": "event"
@@ -169,9 +314,24 @@ export const POEP_CONTRACT_ABI = [
     {
         "anonymous": false,
         "inputs": [
-            { "indexed": true, "internalType": "address", "name": "user", "type": "address" },
-            { "indexed": false, "internalType": "uint256", "name": "oldScore", "type": "uint256" },
-            { "indexed": false, "internalType": "uint256", "name": "newScore", "type": "uint256" }
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "user",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "oldScore",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "newScore",
+                "type": "uint256"
+            }
         ],
         "name": "ScoreUpdated",
         "type": "event"

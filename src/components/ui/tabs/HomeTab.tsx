@@ -1,12 +1,17 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useAccount, useSwitchChain } from 'wagmi';
 import { useMiniKit } from '@coinbase/onchainkit/minikit';
+import { Transaction, TransactionButton, TransactionStatus, TransactionStatusLabel, TransactionStatusAction } from '@coinbase/onchainkit/transaction';
+import { encodeFunctionData } from 'viem';
 import { Button } from '../Button';
 import { WalletConnector } from '../../WalletConnector';
 import { generateFaceHash, generateZKProof, type ZKProofResult } from '~/lib/zkProof';
 import { generateZKProof as contractGenerateZKProof } from '~/lib/contract';
+import { POEP_CONTRACT_ABI } from '~/lib/constants';
+import { POEP_CONTRACT_ADDRESS } from '~/lib/config';
+import { base } from 'wagmi/chains';
 
 /**
  * HomeTab component for PoEP (Proof-of-Existence Passport)
@@ -39,16 +44,43 @@ export function HomeTab() {
   const [_zkProof, setZkProof] = useState<ZKProofResult | null>(null);
   const [userTrustScore, setUserTrustScore] = useState<number>(0);
   const [hasExistingPassport, setHasExistingPassport] = useState<boolean>(false);
+  const [tokenId, setTokenId] = useState<string | null>(null);
+  const [transactionHash, setTransactionHash] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [walletConnected, setWalletConnected] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
   // Base MiniKit integration
   const { context } = useMiniKit();
-  const user = context?.user;
+  const _user = context?.user;
+
+  // Detect if we're in Farcaster environment
+  const isInFarcaster = Boolean(context?.user?.fid);
+
   // Wallet integration
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chain } = useAccount();
+
+  const { switchChain } = useSwitchChain();
+
+  // Transaction state management for OnchainKit
+  const [contractCallData, setContractCallData] = useState<{
+    to: `0x${string}`;
+    data: `0x${string}`;
+    value: string;
+  } | null>(null);
+
+  // Helper function to get explorer URLs
+  const getExplorerUrls = (tokenId: string | null, transactionHash: string | null) => {
+    const baseUrl = 'https://basescan.org'; // Always use mainnet explorer
+
+    return {
+      token: tokenId && POEP_CONTRACT_ADDRESS ? `${baseUrl}/nft/${POEP_CONTRACT_ADDRESS}/${tokenId}` : null,
+      transaction: transactionHash ? `${baseUrl}/tx/${transactionHash}` : null,
+      contract: POEP_CONTRACT_ADDRESS ? `${baseUrl}/address/${POEP_CONTRACT_ADDRESS}` : null
+    };
+  };
 
   // Handle client-side mounting
   useEffect(() => {
@@ -60,31 +92,66 @@ export function HomeTab() {
     setWalletConnected(isConnected);
   }, [isConnected]);
 
-  // Check for existing passport when component mounts
+  // Check network and switch if needed when wallet connects
   useEffect(() => {
-    const checkExistingPassport = async () => {
-      if (user?.fid) {
-        try {
-          const response = await fetch(`/api/check-poep?fid=${user.fid}`);
-          if (response.ok) {
-            const data = await response.json();
-            setHasExistingPassport(data.hasPoEP);
-            setUserTrustScore(data.trustScore || 0);
+    const checkAndSwitchNetwork = async () => {
+      if (address && isConnected && chain && !isInFarcaster) {
+        const requiredChain = base; // Always use Base mainnet for production
+
+        if (chain.id !== requiredChain.id) {
+          try {
+            console.log(`Switching from ${chain.name} (${chain.id}) to ${requiredChain.name} (${requiredChain.id})`);
+            await switchChain({ chainId: requiredChain.id });
+          } catch (error) {
+            console.warn('Auto network switch failed:', error);
           }
-        } catch (error) {
-          setHasExistingPassport(false);
-          setUserTrustScore(0);
         }
       }
     };
 
+    checkAndSwitchNetwork();
+  }, [address, isConnected, chain, isInFarcaster, switchChain]);
+
+  // Check for existing passport when component mounts or address changes
+  useEffect(() => {
+    const checkExistingPassport = async () => {
+      if (address && isConnected) {
+        try {
+          const response = await fetch(`/api/check-poep?address=${address}`);
+          if (response.ok) {
+            const data = await response.json();
+            setHasExistingPassport(data.hasPoEP);
+            setUserTrustScore(data.trustScore || 0);
+            setTokenId(data.tokenId);
+          }
+        } catch (_error) {
+          setHasExistingPassport(false);
+          setUserTrustScore(0);
+          setTokenId(null);
+        }
+      } else {
+        // Reset when wallet disconnected
+        setHasExistingPassport(false);
+        setUserTrustScore(0);
+        setTokenId(null);
+      }
+    };
+
     checkExistingPassport();
-  }, [user]);
+  }, [address, isConnected]);
+
+
 
   const startCamera = async () => {
     try {
       setError(null);
       setCurrentStep(PoEPStep.Camera);
+
+      // Check if navigator.mediaDevices is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera API not supported in this browser');
+      }
+
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -98,9 +165,25 @@ export function HomeTab() {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
-    } catch (err) {
-      console.warn('Camera access error:', err);
-      setError('Camera access denied. Please allow camera permissions.');
+    } catch (err: any) {
+
+      let errorMessage = 'Camera access denied. ';
+
+      if (err.name === 'NotAllowedError') {
+        errorMessage += 'Please allow camera permissions in your browser settings.';
+      } else if (err.name === 'NotFoundError') {
+        errorMessage += 'No camera found on this device.';
+      } else if (err.name === 'NotReadableError') {
+        errorMessage += 'Camera is being used by another application.';
+      } else if (err.name === 'OverconstrainedError') {
+        errorMessage += 'Camera does not support the requested settings.';
+      } else if (err.name === 'SecurityError') {
+        errorMessage += 'Camera access blocked for security reasons. Try using HTTPS.';
+      } else {
+        errorMessage += `Error: ${err.message || 'Unknown error'}`;
+      }
+
+      setError(errorMessage);
       setCurrentStep(PoEPStep.Error);
     }
   };
@@ -136,53 +219,31 @@ export function HomeTab() {
     setError(null);
 
     try {
-      console.log('=== STARTING POEP CREATION ===');
-      console.log('Image data length:', imageData.length);
-      console.log('Image data type:', typeof imageData);
-      console.log('Wallet address:', address);
-      console.log('Is wallet connected:', !!address);
 
       // Step 1: Convert image to face hash
       let faceHash: string;
       try {
-        console.log('Step 1: Starting face hash generation...');
         faceHash = await generateFaceHash(imageData);
-        console.log('Step 1: Face hash generated successfully:', faceHash.substring(0, 20) + '...');
       } catch (err) {
-        console.error('Step 1: Face hash generation failed:', err);
         throw new Error(`Face analysis failed: ${(err as Error).message}`);
       }
 
       // Step 2: Generate ZK proof
       let proof: ZKProofResult;
       try {
-        console.log('Step 2: Starting ZK proof generation...');
-        if (!address) {
-          throw new Error('Wallet address is required for ZK proof generation');
-        }
-        proof = await generateZKProof(faceHash, address);
-        console.log('Step 2: ZK proof generated successfully');
-        console.log('Proof structure:', Object.keys(proof));
+        proof = await generateZKProof(faceHash);
         setZkProof(proof);
       } catch (err) {
-        console.error('Step 2: ZK proof generation failed:', err);
         throw new Error(`ZK proof generation failed: ${(err as Error).message}`);
       }
 
-      // Step 3: Mint soul-bound NFT
+      // Step 3: Prepare transaction data for OnchainKit
       try {
-        console.log('Step 3: Starting NFT minting...');
-        await mintPoEPNFT(proof);
-        console.log('Step 3: NFT minted successfully');
+        await prepareTransaction(proof);
       } catch (err) {
-        console.error('Step 3: NFT minting failed:', err);
-        throw new Error(`NFT minting failed: ${(err as Error).message}`);
+        throw new Error(`Transaction preparation failed: ${(err as Error).message}`);
       }
-
-      console.log('=== POEP CREATION COMPLETED SUCCESSFULLY ===');
-      setCurrentStep(PoEPStep.Success);
     } catch (err: any) {
-      console.error('=== POEP CREATION FAILED ===', err);
 
       let errorMessage = 'Failed to create PoEP';
       if (err.message) {
@@ -204,66 +265,63 @@ export function HomeTab() {
   };
 
 
-  const mintPoEPNFT = async (proof: ZKProofResult) => {
+  const prepareTransaction = async (proof: ZKProofResult) => {
     try {
-      console.log('=== STARTING MINT PROCESS ===');
-      console.log('Received proof:', {
-        faceHash: proof.faceHash.substring(0, 20) + '...',
-        nullifier: proof.nullifier.toString().substring(0, 20) + '...',
-        nonce: proof.nonce
-      });
-
       // Generate contract-compatible ZK proof using the same face hash
       if (!address) {
         throw new Error('Wallet address is required for contract proof generation');
       }
 
-      console.log('Generating contract-compatible proof...');
+      // Check and switch network if needed
+      if (!isInFarcaster && chain) {
+        const requiredChain = base; // Always use Base mainnet
+
+        if (chain.id !== requiredChain.id) {
+          try {
+            await switchChain({ chainId: requiredChain.id });
+          } catch (_error: any) {
+            throw new Error(`Please switch to ${requiredChain.name} network in your wallet`);
+          }
+        }
+      }
+
       const contractProof = await contractGenerateZKProof(proof.faceHash, proof.nonce, address);
-      console.log('Contract proof generated successfully:', Object.keys(contractProof));
 
-      // Validate wallet connection before minting
-      if (!address) {
-        throw new Error('Wallet not connected. Please connect your wallet first.');
+      // Get contract address from config (environment-aware)
+      if (!POEP_CONTRACT_ADDRESS) {
+        throw new Error('Contract address not configured for current environment');
       }
 
-      const requestPayload = {
-        proof: contractProof,
-        nullifier: proof.nullifier.toString(), // Convert BigInt to string
-        userAddress: address // Use the connected wallet address
-      };
-
-      console.log('Sending mint request to API...');
-      console.log('Request payload structure:', {
-        proof: Object.keys(contractProof),
-        nullifier: typeof requestPayload.nullifier,
-        userAddress: typeof requestPayload.userAddress
+      // Prepare transaction data for OnchainKit Transaction component
+      const data = encodeFunctionData({
+        abi: POEP_CONTRACT_ABI,
+        functionName: 'mint',
+        args: [
+          contractProof.pA,
+          contractProof.pB,
+          contractProof.pC,
+          BigInt(contractProof.nullifier)
+        ]
       });
 
-      // Submit the ZK proof to the PoEP smart contract on Base
-      const response = await fetch('/api/mint-poep', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestPayload)
+      setContractCallData({
+        to: POEP_CONTRACT_ADDRESS,
+        data,
+        value: '0',
       });
 
-      console.log('API response status:', response.status);
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('API error response:', errorData);
-        throw new Error(`Minting failed: ${response.status} - ${errorData}`);
+      // Move to processing step to show Transaction component
+      setCurrentStep(PoEPStep.Processing);
+    } catch (error: any) {
+      if (error.message?.includes('User rejected')) {
+        throw new Error('Transaction was cancelled. Please try again and approve the transaction.');
+      } else if (error.message?.includes('Already minted') || error.message?.includes('AlreadyMinted')) {
+        setHasExistingPassport(true);
+        setCurrentStep(PoEPStep.Success);
+        return;
+      } else {
+        throw error;
       }
-
-      const result = await response.json();
-      console.log('Mint successful:', result);
-
-      // Update user state after successful mint
-      setUserTrustScore(result.trustScore || 100);
-      setHasExistingPassport(true);
-    } catch (error) {
-      console.error('Mint function error:', error);
-      throw error;
     }
   };
 
@@ -271,117 +329,325 @@ export function HomeTab() {
     setCurrentStep(PoEPStep.Welcome);
     setCapturedImage(null);
     setError(null);
+    setContractCallData(null);
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
   };
 
-  const renderWelcome = () => (
-    <div className="text-center space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold">🔐 PoEP</h1>
-        <h2 className="text-xl font-semibold text-blue-600">Proof-of-Existence Passport</h2>
+  const refreshTrustScore = async () => {
+    if (!address || !isConnected) return;
+
+    try {
+      const response = await fetch(`/api/check-poep?address=${address}`);
+      if (response.ok) {
+        const data = await response.json();
+        setUserTrustScore(data.trustScore || 0);
+        setHasExistingPassport(data.hasPoEP);
+        setTokenId(data.tokenId);
+      }
+    } catch (_error) {
+      // Silent fail - user can try again
+    }
+  };
+
+  // Handle successful transaction
+  const handleTransactionSuccess = async (txHash: string) => {
+    setTransactionHash(txHash);
+
+    // Wait a moment for transaction to be processed
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    // Check if user now has a passport
+    try {
+      const response = await fetch(`/api/check-poep?address=${address}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.hasPoEP) {
+          setHasExistingPassport(true);
+          setUserTrustScore(data.trustScore || 100);
+          setTokenId(data.tokenId);
+          setCurrentStep(PoEPStep.Success);
+          return;
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to verify passport status:', error);
+    }
+
+    // Default success state if verification fails
+    setHasExistingPassport(true);
+    setUserTrustScore(100);
+    setCurrentStep(PoEPStep.Success);
+  };
+
+  const renderExistingPassport = () => (
+    <div className="space-y-6 px-6 w-full max-w-md mx-auto">
+      {/* Header */}
+      <div className="text-center space-y-4">
+        <div className="w-20 h-20 mx-auto bg-gradient-to-br from-primary-500 to-accent-500 rounded-3xl flex items-center justify-center text-4xl">
+          🛡️
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
+            PoEP
+          </h1>
+          <p className="text-lg text-neutral-600 dark:text-neutral-300">Proof-of-Existence Passport</p>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">Your onchain identity, secured by ZK proofs</p>
+        </div>
       </div>
 
-      {hasExistingPassport ? (
-        <div className="space-y-4">
-          <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-            <p className="text-green-800 font-semibold">✅ Passport Active</p>
-            <p className="text-sm text-green-600">
-              Trust Score: {userTrustScore} • Verified Human
-            </p>
-          </div>
-
-          <div className="space-y-2 text-sm text-gray-600">
-            <p>Your PoEP is working on Base:</p>
-            <p>📈 Trust score increases with each transaction</p>
-            <p>🎯 Unlocks perks across dApps</p>
-            <p>🔒 Privacy preserved with ZK proofs</p>
-          </div>
-
-          <Button
-            onClick={() => setCurrentStep(PoEPStep.Success)}
-            className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg"
-          >
-            View Details
-          </Button>
+      {/* Active Passport Status */}
+      <div className="card-primary p-6 text-center">
+        <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-success-500 to-success-600 rounded-full flex items-center justify-center text-2xl">
+          ✅
         </div>
-      ) : (
-        <div className="space-y-4">
-          <div className="space-y-4 text-sm text-gray-600">
-            <p>Your privacy-first identity badge for Base</p>
-            <div className="space-y-2">
-              <p>✨ Take a 2-second selfie</p>
-              <p>🔒 Generate ZK proof locally</p>
-              <p>🎯 Mint soul-bound NFT</p>
-              <p>📈 Build trust score</p>
+        <h3 className="text-xl font-bold text-primary-800 dark:text-primary-200 mb-2">
+          Passport Active!
+        </h3>
+        <div className="flex items-center justify-center space-x-4 mb-4">
+          <div className="text-center">
+            <p className="text-2xl font-bold text-primary-700 dark:text-primary-300">{userTrustScore}</p>
+            <p className="text-xs text-primary-600 dark:text-primary-400">Trust Score</p>
+          </div>
+          <div className="w-px h-8 bg-primary-300 dark:bg-primary-600"></div>
+          <div className="text-center">
+            <p className="text-sm font-semibold text-primary-700 dark:text-primary-300">Verified</p>
+            <p className="text-xs text-primary-600 dark:text-primary-400">Identity</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Benefits Overview */}
+      <div className="card p-6">
+        <h4 className="font-semibold mb-4 text-center">How PoEP Grows</h4>
+        <div className="space-y-3 text-sm">
+          <p className="text-neutral-600 dark:text-neutral-300">
+            Your trust score increases automatically with every Base transaction:
+          </p>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span>• Swaps, casts, stakes</span>
+              <span className="status-success">+1 point each</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>• NFT mints</span>
+              <span className="status-success">+2 points</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>• Complex DeFi</span>
+              <span className="status-success">+3 points</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Features Grid */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="card p-4 text-center">
+          <div className="text-2xl mb-2">✅</div>
+          <p className="text-xs font-medium">Soul-bound NFT secured</p>
+        </div>
+        <div className="card p-4 text-center">
+          <div className="text-2xl mb-2">🔒</div>
+          <p className="text-xs font-medium">Privacy preserved with ZK</p>
+        </div>
+        <div className="card p-4 text-center">
+          <div className="text-2xl mb-2">🔑</div>
+          <p className="text-xs font-medium">Unique per wallet</p>
+        </div>
+        <div className="card p-4 text-center">
+          <div className="text-2xl mb-2">🚫</div>
+          <p className="text-xs font-medium">Non-transferable for life</p>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <Button
+          onClick={() => setCurrentStep(PoEPStep.Success)}
+          className="w-full btn-primary"
+        >
+          📊 View Full Details
+        </Button>
+        <Button
+          onClick={refreshTrustScore}
+          className="w-full btn-secondary"
+        >
+          🔄 Refresh Trust Score
+        </Button>
+        {tokenId && (
+          <Button
+            onClick={() => {
+              const explorerUrls = getExplorerUrls(tokenId, transactionHash);
+              if (explorerUrls.token) {
+                window.open(explorerUrls.token, '_blank');
+              }
+            }}
+            className="w-full btn-outline"
+          >
+            🔍 View on Basescan
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderWelcome = () => (
+    <div className="space-y-8 px-6 w-full max-w-md mx-auto">
+      {/* Hero Section */}
+      <div className="text-center space-y-4">
+        <div className="w-20 h-20 mx-auto bg-gradient-to-br from-primary-500 to-accent-500 rounded-3xl flex items-center justify-center text-4xl animate-pulse">
+          🔐
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
+            PoEP
+          </h1>
+          <p className="text-lg text-neutral-600 dark:text-neutral-300">Proof-of-Existence Passport</p>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">Your onchain identity, secured by ZK proofs</p>
+        </div>
+      </div>
+
+      {/* Network Status */}
+      {!isInFarcaster && chain && (
+        <div className="card p-3 text-center">
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">
+            Network: <span className={`font-medium ${chain.id === base.id ? 'text-green-600' : 'text-red-600'}`}>
+              {chain.name}
+            </span>
+            {chain.id !== base.id && (
+              <span className="text-red-600 ml-2">⚠️ Please switch to Base Mainnet</span>
+            )}
+          </p>
+        </div>
+      )}
+
+      {/* Welcome content for new users */}
+        <div className="space-y-6">
+          {/* Features Grid */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="card-primary p-4 text-center">
+              <div className="text-3xl mb-2">✨</div>
+              <p className="text-sm font-medium text-primary-800 dark:text-primary-200">2-second selfie</p>
+            </div>
+            <div className="card-accent p-4 text-center">
+              <div className="text-3xl mb-2">🔒</div>
+              <p className="text-sm font-medium text-accent-800 dark:text-accent-200">ZK proof locally</p>
+            </div>
+            <div className="card-primary p-4 text-center">
+              <div className="text-3xl mb-2">🎯</div>
+              <p className="text-sm font-medium text-primary-800 dark:text-primary-200">Soul-bound NFT</p>
+            </div>
+            <div className="card-accent p-4 text-center">
+              <div className="text-3xl mb-2">📈</div>
+              <p className="text-sm font-medium text-accent-800 dark:text-accent-200">Build trust score</p>
             </div>
           </div>
 
           {!walletConnected ? (
             <div className="space-y-4">
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                <p className="text-blue-800 font-semibold">Step 1: Connect Wallet</p>
-                <p className="text-sm text-blue-600">
-                  Connect your wallet to create your PoEP
+              <div className="card-primary p-6 text-center">
+                <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center text-xl">
+                  1️⃣
+                </div>
+                <h3 className="font-semibold text-primary-800 dark:text-primary-200 mb-2">Connect Wallet</h3>
+                <p className="text-sm text-primary-600 dark:text-primary-300">
+                  Connect your wallet to create your PoEP passport
                 </p>
               </div>
               <WalletConnector onConnectionChange={setWalletConnected} />
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                <p className="text-green-800 font-semibold">Step 2: Create PoEP</p>
-                <p className="text-sm text-green-600">
-                  Wallet connected • Ready to create your passport
+              <div className="card-accent p-6 text-center">
+                <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-success-500 to-success-600 rounded-xl flex items-center justify-center text-xl">
+                  ✅
+                </div>
+                <h3 className="font-semibold text-accent-800 dark:text-accent-200 mb-2">Ready to Create</h3>
+                <p className="text-sm text-accent-600 dark:text-accent-300">
+                  Wallet connected • Your passport awaits
                 </p>
               </div>
 
               <Button
                 onClick={startCamera}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg"
+                className="w-full btn-primary text-lg py-4"
               >
-                📸 Create PoEP
+                📸 Create PoEP Passport
               </Button>
 
-              <p className="text-xs text-gray-500">
-                Camera never leaves your device • Privacy guaranteed
-              </p>
+              <div className="card p-4">
+                <div className="flex items-center space-x-2 text-xs text-neutral-500 dark:text-neutral-400">
+                  <div className="w-2 h-2 bg-success-500 rounded-full"></div>
+                  <span>Camera never leaves your device</span>
+                </div>
+                <div className="flex items-center space-x-2 text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                  <div className="w-2 h-2 bg-success-500 rounded-full"></div>
+                  <span>Privacy guaranteed with Zero-Knowledge proofs</span>
+                </div>
+              </div>
             </div>
           )}
         </div>
-      )}
     </div>
   );
 
   const renderCamera = () => (
-    <div className="text-center space-y-4">
-      <h3 className="text-lg font-semibold">Take Your Selfie</h3>
-
-      <div className="relative mx-auto w-64 h-48 bg-gray-100 rounded-lg overflow-hidden">
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          className="w-full h-full object-cover"
-        />
+    <div className="space-y-6 px-6 w-full max-w-md mx-auto">
+      <div className="text-center space-y-2">
+        <div className="w-16 h-16 mx-auto bg-gradient-to-br from-primary-500 to-accent-500 rounded-full flex items-center justify-center text-2xl">
+          📸
+        </div>
+        <h3 className="text-2xl font-bold">Take Your Selfie</h3>
+        <p className="text-neutral-500 dark:text-neutral-400">Position your face in the frame</p>
       </div>
 
-      <div className="space-y-2">
+      <div className="card p-6">
+        <div className="relative mx-auto w-full max-w-sm aspect-[4/3] bg-neutral-100 dark:bg-neutral-800 rounded-2xl overflow-hidden shadow-inner">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            className="w-full h-full object-cover"
+          />
+          {/* Camera overlay guide */}
+          <div className="absolute inset-4 border-2 border-dashed border-primary-400 rounded-xl pointer-events-none">
+            <div className="absolute top-2 left-2 w-4 h-4 border-l-2 border-t-2 border-primary-500 rounded-tl"></div>
+            <div className="absolute top-2 right-2 w-4 h-4 border-r-2 border-t-2 border-primary-500 rounded-tr"></div>
+            <div className="absolute bottom-2 left-2 w-4 h-4 border-l-2 border-b-2 border-primary-500 rounded-bl"></div>
+            <div className="absolute bottom-2 right-2 w-4 h-4 border-r-2 border-b-2 border-primary-500 rounded-br"></div>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
         <Button
           onClick={capturePhoto}
-          className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg"
+          className="w-full btn-success text-lg py-4"
         >
-          📸 Capture
+          📸 Capture Photo
         </Button>
-        <br />
+
         <button
           onClick={resetFlow}
-          className="text-sm text-gray-500 underline"
+          className="w-full text-sm text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
         >
           Cancel
         </button>
+      </div>
+
+      <div className="card p-4">
+        <div className="space-y-2 text-xs text-neutral-500 dark:text-neutral-400">
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 bg-success-500 rounded-full"></div>
+            <span>Photo processed locally on your device</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 bg-success-500 rounded-full"></div>
+            <span>Never uploaded or stored anywhere</span>
+          </div>
+        </div>
       </div>
 
       <canvas ref={canvasRef} className="hidden" />
@@ -389,70 +655,285 @@ export function HomeTab() {
   );
 
   const renderProcessing = () => (
-    <div className="text-center space-y-4">
-      <h3 className="text-lg font-semibold">Processing...</h3>
-      <div className="animate-spin h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full mx-auto"></div>
-      <div className="space-y-2 text-sm text-gray-600">
-        <p>🔍 Analyzing biometric features</p>
-        <p>🧮 Generating ZK proof</p>
-        <p>⛓️ Minting soul-bound NFT</p>
+    <div className="space-y-8 px-6 w-full max-w-md mx-auto">
+      <div className="text-center space-y-4">
+        <div className="w-20 h-20 mx-auto bg-gradient-to-br from-primary-500 to-accent-500 rounded-full flex items-center justify-center">
+          <div className="spinner-primary w-10 h-10"></div>
+        </div>
+        <div>
+          <h3 className="text-2xl font-bold">Creating Your Passport</h3>
+          <p className="text-neutral-500 dark:text-neutral-400">
+            This may take a few moments...
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div className="card-primary p-6">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center text-xl">
+              🔍
+            </div>
+            <div className="flex-1">
+              <h4 className="font-semibold text-primary-800 dark:text-primary-200">Analyzing Biometric Features</h4>
+              <p className="text-sm text-primary-600 dark:text-primary-300">Processing facial recognition data</p>
+            </div>
+            <div className="w-6 h-6 bg-primary-500 rounded-full animate-pulse"></div>
+          </div>
+        </div>
+
+        <div className="card-accent p-6">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-accent-500 to-accent-600 rounded-xl flex items-center justify-center text-xl">
+              🧮
+            </div>
+            <div className="flex-1">
+              <h4 className="font-semibold text-accent-800 dark:text-accent-200">Generating ZK Proof</h4>
+              <p className="text-sm text-accent-600 dark:text-accent-300">Creating privacy-preserving proof</p>
+            </div>
+            <div className="w-6 h-6 bg-accent-500 rounded-full animate-pulse animation-delay-200"></div>
+          </div>
+        </div>
+
+        <div className="card p-6">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-success-500 to-success-600 rounded-xl flex items-center justify-center text-xl">
+              ⛓️
+            </div>
+            <div className="flex-1">
+              <h4 className="font-semibold">
+                Minting Soul-bound NFT
+              </h4>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                Securing on Base blockchain
+              </p>
+            </div>
+            <div className="w-6 h-6 bg-success-500 rounded-full animate-pulse animation-delay-500"></div>
+          </div>
+        </div>
+      </div>
+
+      {/* OnchainKit Transaction Component */}
+      {contractCallData && (
+        <div className="card-primary p-6">
+          <Transaction
+            calls={[{
+              to: contractCallData.to,
+              data: contractCallData.data,
+              value: BigInt(contractCallData.value)
+            }]}
+            chainId={base.id} // Always use Base mainnet
+            onSuccess={(response) => {
+              const txHash = response.transactionReceipts?.[0]?.transactionHash;
+              if (txHash) {
+                handleTransactionSuccess(txHash);
+              } else {
+                setError('Transaction completed but hash not available');
+                setCurrentStep(PoEPStep.Error);
+              }
+            }}
+            onError={(error) => {
+              let errorMessage = 'Transaction failed';
+              if (error.message?.includes('User rejected')) {
+                errorMessage = 'Transaction was rejected. Please try again and approve the transaction in your wallet.';
+              } else if (error.message?.includes('AlreadyMinted') || error.message?.includes('Already minted')) {
+                setHasExistingPassport(true);
+                setCurrentStep(PoEPStep.Success);
+                return;
+              } else if (error.message?.includes('insufficient funds')) {
+                errorMessage = 'Insufficient ETH for gas fees. Please add more ETH to your wallet.';
+              } else {
+                errorMessage = `Transaction failed: ${error.message}`;
+              }
+              setError(errorMessage);
+              setCurrentStep(PoEPStep.Error);
+            }}
+          >
+            <TransactionButton className="w-full btn-primary" />
+            <TransactionStatus>
+              <TransactionStatusLabel />
+              <TransactionStatusAction />
+            </TransactionStatus>
+          </Transaction>
+        </div>
+      )}
+
+      <div className="card p-4">
+        <div className="text-center space-y-2">
+          <p className="text-sm font-medium">Privacy Protected</p>
+          <div className="flex items-center justify-center space-x-4 text-xs text-neutral-500 dark:text-neutral-400">
+            <div className="flex items-center space-x-1">
+              <div className="w-2 h-2 bg-success-500 rounded-full"></div>
+              <span>ZK-SNARK</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <div className="w-2 h-2 bg-success-500 rounded-full"></div>
+              <span>Local Processing</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <div className="w-2 h-2 bg-success-500 rounded-full"></div>
+              <span>No Data Stored</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 
   const renderSuccess = () => (
-    <div className="text-center space-y-6">
-      <div className="text-6xl">🎉</div>
-      <div className="space-y-2">
-        <h3 className="text-xl font-bold text-green-600">
-          {hasExistingPassport ? 'PoEP Active!' : 'PoEP Created!'}
-        </h3>
-        <p className="text-sm text-gray-600">Your unique identity is secured on Base</p>
+    <div className="space-y-8 px-6 w-full max-w-md mx-auto">
+      {/* Success Hero */}
+      <div className="text-center space-y-4">
+        <div className="w-24 h-24 mx-auto bg-gradient-to-br from-success-400 to-success-600 rounded-full flex items-center justify-center text-4xl animate-bounce">
+          🎉
+        </div>
+        <div>
+          <h3 className="text-3xl font-bold bg-gradient-to-r from-success-600 to-primary-600 bg-clip-text text-transparent">
+            {hasExistingPassport ? 'PoEP Active!' : 'PoEP Created!'}
+          </h3>
+          <p className="text-neutral-500 dark:text-neutral-400">Your unique identity is secured on Base</p>
+        </div>
       </div>
 
-      <div className="bg-green-50 p-4 rounded-lg space-y-3 border border-green-200">
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div className="bg-white p-3 rounded">
-            <p className="font-semibold text-gray-800">Trust Score</p>
-            <p className="text-2xl font-bold text-green-600">{userTrustScore}</p>
+      {/* Main Stats */}
+      <div className="card-primary p-6">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="text-center">
+            <div className="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-success-500 to-success-600 rounded-2xl flex items-center justify-center">
+              <span className="text-3xl font-bold text-white">{userTrustScore}</span>
+            </div>
+            <p className="font-semibold text-primary-800 dark:text-primary-200">Trust Score</p>
+            <p className="text-xs text-primary-600 dark:text-primary-300">Building with each transaction</p>
           </div>
-          <div className="bg-white p-3 rounded">
-            <p className="font-semibold text-gray-800">Status</p>
-            <p className="text-sm text-green-600">✅ Verified</p>
+          <div className="text-center">
+            <div className="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl flex items-center justify-center">
+              <span className="text-2xl">✅</span>
+            </div>
+            <p className="font-semibold text-primary-800 dark:text-primary-200">Status</p>
+            <p className="text-xs text-primary-600 dark:text-primary-300">Verified & Active</p>
           </div>
         </div>
+      </div>
 
-        <div className="space-y-1 text-sm">
-          <p>✅ Soul-bound NFT secured</p>
-          <p>✅ Privacy preserved with ZK</p>
-          <p>✅ Unique per wallet</p>
-          <p>✅ Non-transferable for life</p>
+      {/* Features Grid */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="card p-4 text-center">
+          <div className="text-2xl mb-2">🔒</div>
+          <p className="text-xs font-medium">Soul-bound NFT secured</p>
+        </div>
+        <div className="card p-4 text-center">
+          <div className="text-2xl mb-2">🛡️</div>
+          <p className="text-xs font-medium">Privacy preserved with ZK</p>
+        </div>
+        <div className="card p-4 text-center">
+          <div className="text-2xl mb-2">🔑</div>
+          <p className="text-xs font-medium">Unique per wallet</p>
+        </div>
+        <div className="card p-4 text-center">
+          <div className="text-2xl mb-2">🚫</div>
+          <p className="text-xs font-medium">Non-transferable for life</p>
         </div>
       </div>
 
-      <div className="bg-blue-50 p-4 rounded-lg text-sm space-y-2">
-        <p className="font-semibold text-blue-800">How PoEP Grows:</p>
-        <p className="text-blue-600">Your trust score increases automatically with every Base transaction:</p>
-        <div className="space-y-1 text-xs text-blue-500">
-          <p>• Swaps, casts, stakes → +1 point each</p>
-          <p>• NFT mints → +2 points</p>
-          <p>• Complex DeFi → +3 points</p>
+      {/* Growth Information */}
+      <div className="card-accent p-6">
+        <h4 className="font-semibold text-accent-800 dark:text-accent-200 mb-4 text-center">How PoEP Grows</h4>
+        <p className="text-sm text-accent-600 dark:text-accent-300 mb-4 text-center">
+          Your trust score increases automatically with every Base transaction:
+        </p>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm">• Swaps, casts, stakes</span>
+            <span className="status-success">+1 point each</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm">• NFT mints</span>
+            <span className="status-success">+2 points</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm">• Complex DeFi</span>
+            <span className="status-success">+3 points</span>
+          </div>
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Button
-          onClick={resetFlow}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
-        >
-          ← Back to Home
-        </Button>
-
-        {!hasExistingPassport && (
-          <p className="text-xs text-gray-500">
-            Only one PoEP per wallet allowed
+      {/* Transaction Link - Primary Action for New Mints */}
+      {transactionHash && !hasExistingPassport && (
+        <div className="card-success p-6 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-success-500 to-success-600 rounded-2xl flex items-center justify-center">
+            <span className="text-2xl">🔗</span>
+          </div>
+          <h4 className="font-semibold text-success-800 dark:text-success-200 mb-2">NFT Successfully Minted!</h4>
+          <p className="text-sm text-success-600 dark:text-success-300 mb-4">
+            Your PoEP passport is now live on Base blockchain
           </p>
-        )}
+          <Button
+            onClick={() => {
+              const explorerUrls = getExplorerUrls(tokenId, transactionHash);
+              const url = explorerUrls.transaction || explorerUrls.token;
+              if (url) {
+                window.open(url, '_blank');
+              }
+            }}
+            className="w-full btn-primary text-lg py-4 bg-gradient-to-r from-success-500 to-success-600 hover:from-success-600 hover:to-success-700"
+          >
+            🔍 View on BaseScan
+          </Button>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="space-y-4">
+        <div className="space-y-3">
+          {/* Show Back to Home as primary when it's an existing passport */}
+          {hasExistingPassport && (
+            <Button
+              onClick={resetFlow}
+              className="w-full btn-primary"
+            >
+              ← Back to Home
+            </Button>
+          )}
+
+          {/* Show Back to Home as secondary when it's a new mint with transaction */}
+          {!hasExistingPassport && (
+            <Button
+              onClick={resetFlow}
+              className="w-full btn-secondary"
+            >
+              ← Back to Home
+            </Button>
+          )}
+
+          <Button
+            onClick={refreshTrustScore}
+            className="w-full btn-secondary"
+          >
+            🔄 Refresh Trust Score
+          </Button>
+
+          {/* Legacy explorer link for existing passports */}
+          {(tokenId || transactionHash) && hasExistingPassport && (
+            <Button
+              onClick={() => {
+                const explorerUrls = getExplorerUrls(tokenId, transactionHash);
+                const url = explorerUrls.token || explorerUrls.transaction;
+                if (url) {
+                  window.open(url, '_blank');
+                }
+              }}
+              className="w-full btn-outline"
+            >
+              🔍 View on Basescan
+            </Button>
+          )}
+        </div>
+
+        <div className="card p-4 text-center">
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">
+            🔒 Only one PoEP per wallet allowed • Your unique identity is now secured
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -500,7 +981,9 @@ export function HomeTab() {
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-200px)] px-6">
       <div className="w-full max-w-md mx-auto">
-        {currentStep === PoEPStep.Welcome && renderWelcome()}
+        {currentStep === PoEPStep.Welcome && (
+          hasExistingPassport ? renderExistingPassport() : renderWelcome()
+        )}
         {currentStep === PoEPStep.Camera && renderCamera()}
         {currentStep === PoEPStep.Processing && renderProcessing()}
         {currentStep === PoEPStep.Success && renderSuccess()}

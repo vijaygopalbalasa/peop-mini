@@ -5,7 +5,8 @@ import { base, baseSepolia } from 'wagmi/chains';
 
 export function MiniKitContextProvider({ children }: { children: ReactNode }) {
   // Use Sepolia for testing, mainnet for production
-  const chain = process.env.NODE_ENV === 'production' ? base : baseSepolia;
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENVIRONMENT === 'production';
+  const chain = isProduction ? base : baseSepolia;
 
   return (
     <OnchainKitProvider

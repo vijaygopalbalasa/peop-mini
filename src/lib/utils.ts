@@ -2,14 +2,11 @@ import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import {
   APP_BUTTON_TEXT,
-  APP_DESCRIPTION,
   APP_ICON_URL,
   APP_NAME,
   APP_OG_IMAGE_URL,
-  APP_PRIMARY_CATEGORY,
   APP_SPLASH_BACKGROUND_COLOR,
   APP_SPLASH_URL,
-  APP_TAGS,
   APP_URL,
   APP_WEBHOOK_URL,
   APP_ACCOUNT_ASSOCIATION,
@@ -36,7 +33,7 @@ export function getMiniAppEmbedMetadata(ogImageUrl?: string) {
   };
 }
 
-function withValidProperties(properties: Record<string, undefined | string | string[] | boolean>) {
+function _withValidProperties(properties: Record<string, undefined | string | string[] | boolean>) {
   return Object.fromEntries(
     Object.entries(properties).filter(([, value]) => (Array.isArray(value) ? value.length > 0 : !!value)),
   );
@@ -98,6 +95,11 @@ export async function getBaseMiniAppManifest() {
           url: APP_URL
         }
       }
+    },
+
+    // Base Builder configuration for mini app ownership verification
+    baseBuilder: {
+      allowedAddresses: [process.env.NEXT_PUBLIC_BASE_BUILDER_ADDRESS || '']
     }
   };
 

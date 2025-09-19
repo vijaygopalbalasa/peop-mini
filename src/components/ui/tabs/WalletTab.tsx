@@ -124,13 +124,13 @@ export function WalletTab() {
 
   // --- Wagmi Hooks ---
   const {
-    sendTransaction,
+    sendTransaction: _sendTransaction,
     error: evmTransactionError,
     isError: isEvmTransactionError,
-    isPending: isEvmTransactionPending,
+    isPending: _isEvmTransactionPending,
   } = useSendTransaction();
 
-  const { isLoading: isEvmTransactionConfirming, isSuccess: isEvmTransactionConfirmed } =
+  const { isLoading: _isEvmTransactionConfirming, isSuccess: _isEvmTransactionConfirmed } =
     useWaitForTransactionReceipt({
       hash: null,
     });
@@ -174,7 +174,7 @@ export function WalletTab() {
       // Use the first connector (farcasterFrame) for auto-connection
       try {
         connect({ connector: connectors[0] });
-      } catch (error) {
+      } catch (_error) {
         // Auto-connection failed
       }
     } else {

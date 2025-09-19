@@ -8,44 +8,52 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({ activeTab, setActiveTab, showWallet = false }) => (
-  <div className="fixed bottom-0 left-0 right-0 mx-4 mb-4 bg-gray-100 dark:bg-gray-800 border-[3px] border-double border-primary px-2 py-2 rounded-lg z-50">
-    <div className="flex justify-around items-center h-14">
+  <div className="fixed bottom-0 left-0 right-0 mx-4 mb-4 card glass z-50">
+    <div className="flex justify-around items-center px-2 py-3">
       <button
         onClick={() => setActiveTab(Tab.Home)}
-        className={`flex flex-col items-center justify-center w-full h-full ${
-          activeTab === Tab.Home ? 'text-primary dark:text-primary-light' : 'text-gray-500 dark:text-gray-400'
+        className={`flex flex-col items-center justify-center px-4 py-2 rounded-xl transition-all duration-200 transform hover:scale-105 ${
+          activeTab === Tab.Home
+            ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 shadow-md'
+            : 'text-neutral-500 dark:text-neutral-400 hover:text-primary-600 dark:hover:text-primary-400'
         }`}
       >
-        <span className="text-xl">🏠</span>
-        <span className="text-xs mt-1">Home</span>
+        <span className="text-2xl mb-1">🏠</span>
+        <span className="text-xs font-medium">Home</span>
       </button>
       <button
         onClick={() => setActiveTab(Tab.Actions)}
-        className={`flex flex-col items-center justify-center w-full h-full ${
-          activeTab === Tab.Actions ? 'text-primary dark:text-primary-light' : 'text-gray-500 dark:text-gray-400'
+        className={`flex flex-col items-center justify-center px-4 py-2 rounded-xl transition-all duration-200 transform hover:scale-105 ${
+          activeTab === Tab.Actions
+            ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 shadow-md'
+            : 'text-neutral-500 dark:text-neutral-400 hover:text-primary-600 dark:hover:text-primary-400'
         }`}
       >
-        <span className="text-xl">⚡</span>
-        <span className="text-xs mt-1">Actions</span>
+        <span className="text-2xl mb-1">⚡</span>
+        <span className="text-xs font-medium">Actions</span>
       </button>
       <button
         onClick={() => setActiveTab(Tab.Context)}
-        className={`flex flex-col items-center justify-center w-full h-full ${
-          activeTab === Tab.Context ? 'text-primary dark:text-primary-light' : 'text-gray-500 dark:text-gray-400'
+        className={`flex flex-col items-center justify-center px-4 py-2 rounded-xl transition-all duration-200 transform hover:scale-105 ${
+          activeTab === Tab.Context
+            ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 shadow-md'
+            : 'text-neutral-500 dark:text-neutral-400 hover:text-primary-600 dark:hover:text-primary-400'
         }`}
       >
-        <span className="text-xl">📋</span>
-        <span className="text-xs mt-1">Context</span>
+        <span className="text-2xl mb-1">📋</span>
+        <span className="text-xs font-medium">Context</span>
       </button>
       {showWallet && (
         <button
           onClick={() => setActiveTab(Tab.Wallet)}
-          className={`flex flex-col items-center justify-center w-full h-full ${
-            activeTab === Tab.Wallet ? 'text-primary dark:text-primary-light' : 'text-gray-500 dark:text-gray-400'
+          className={`flex flex-col items-center justify-center px-4 py-2 rounded-xl transition-all duration-200 transform hover:scale-105 ${
+            activeTab === Tab.Wallet
+              ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 shadow-md'
+              : 'text-neutral-500 dark:text-neutral-400 hover:text-primary-600 dark:hover:text-primary-400'
           }`}
         >
-          <span className="text-xl">👛</span>
-          <span className="text-xs mt-1">Wallet</span>
+          <span className="text-2xl mb-1">👛</span>
+          <span className="text-xs font-medium">Wallet</span>
         </button>
       )}
     </div>

@@ -3,13 +3,14 @@ import { base, baseSepolia } from 'viem/chains';
 import { POEP_CONTRACT_ABI } from './constants';
 import { POEP_CONTRACT_ADDRESS } from './config';
 
-const chain = process.env.NODE_ENV === 'production' ? base : baseSepolia;
+// Environment-specific chain configuration
+const isProduction = process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENVIRONMENT === 'production';
+const chain = isProduction ? base : baseSepolia;
 
 // Prefer explicit RPC URLs for stability if provided
-const rpcUrl =
-  process.env.NODE_ENV === 'production'
-    ? (process.env.NEXT_PUBLIC_BASE_RPC_URL || undefined)
-    : (process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || undefined);
+const rpcUrl = isProduction
+  ? (process.env.NEXT_PUBLIC_BASE_RPC_URL || undefined)
+  : (process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || undefined);
 
 const publicClient = createPublicClient({
   chain,
@@ -46,7 +47,7 @@ export async function getTrustScore(address: `0x${string}`): Promise<number> {
   }
 }
 
-export const generateZKProof = async (faceHash: string, nonce?: string, userAddress?: string) => {
+export const generateZKProof = async (faceHash: string, nonce?: string, _userAddress?: string) => {
   // Real ZK proof generation using snarkjs (loaded via script tag in layout)
   const snarkjs = (window as any).snarkjs;
   if (!snarkjs) throw new Error('snarkjs not loaded');
@@ -56,51 +57,25 @@ export const generateZKProof = async (faceHash: string, nonce?: string, userAddr
     (acc, byte) => acc + byte.toString(16).padStart(2, '0'), ''
   );
 
-  // Get user's first transaction hash via secure API route
-  let firstTxHash: string;
-  if (userAddress) {
-    try {
-      const response = await fetch('/api/get-first-tx', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: userAddress })
-      });
-      const data = await response.json();
+  // Generate timestamp for temporal binding
+  const timestamp = BigInt(Date.now());
 
-      if (response.ok && data.txHash) {
-        firstTxHash = data.txHash;
-      } else {
-        // Fallback: use deterministic hash based on address
-        const addressHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(userAddress.toLowerCase()));
-        const hashArray = Array.from(new Uint8Array(addressHash));
-        firstTxHash = '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      }
-    } catch (error) {
-      // Fallback: use deterministic hash based on address
-      const addressHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(userAddress.toLowerCase()));
-      const hashArray = Array.from(new Uint8Array(addressHash));
-      firstTxHash = '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-  } else {
-    throw new Error('User address is required for ZK proof generation');
-  }
-
-  // Prepare inputs for the 3-input circuit
+  // Prepare inputs for the 3-input circuit (faceHash, nonce, timestamp)
   const fieldSize = BigInt('21888242871839275222246405745257275088548364400416034343698204186575808495617');
 
   let faceHashBigInt = BigInt(faceHash);
-  let firstTxHashBigInt = BigInt(firstTxHash);
   let nonceBigInt = BigInt('0x' + actualNonce);
+  let timestampBigInt = timestamp;
 
   // Reduce to field size if necessary
   if (faceHashBigInt >= fieldSize) faceHashBigInt = faceHashBigInt % fieldSize;
-  if (firstTxHashBigInt >= fieldSize) firstTxHashBigInt = firstTxHashBigInt % fieldSize;
   if (nonceBigInt >= fieldSize) nonceBigInt = nonceBigInt % fieldSize;
+  if (timestampBigInt >= fieldSize) timestampBigInt = timestampBigInt % fieldSize;
 
   const inputs = {
     faceHash: faceHashBigInt.toString(),
-    firstTxHash: firstTxHashBigInt.toString(),
     nonce: nonceBigInt.toString(),
+    timestamp: timestampBigInt.toString(),
   } as any;
 
   const wasmPath = '/circuit.wasm';
