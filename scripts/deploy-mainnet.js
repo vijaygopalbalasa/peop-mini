@@ -1,4 +1,4 @@
-const hre = require('hardhat');
+import hre from 'hardhat';
 
 async function main() {
   console.log('🚀 Deploying PoEP contracts to Base Mainnet...');
@@ -10,8 +10,8 @@ async function main() {
   const balance = await deployer.provider.getBalance(deployer.address);
   console.log('💰 Deployer balance:', hre.ethers.formatEther(balance), 'ETH');
 
-  if (balance < hre.ethers.parseEther('0.01')) {
-    throw new Error('Insufficient ETH balance for deployment (need at least 0.01 ETH)');
+  if (balance < hre.ethers.parseEther('0.001')) {
+    throw new Error('Insufficient ETH balance for deployment (need at least 0.001 ETH)');
   }
 
   // 1. Deploy PoEPVerifier first
