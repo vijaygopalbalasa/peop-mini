@@ -92,7 +92,7 @@ export default function App(
       <Header user={user} />
 
       {/* Main content and footer should be centered */}
-      <div className="container py-2 pb-20">
+      <div className="container py-2 pb-24">
         {/* Main title - Only show if not PoEP default */}
         {title !== "PoEP - Proof-of-Existence Passport" && (
           <h1 className="text-2xl font-bold text-center mb-4">{title}</h1>

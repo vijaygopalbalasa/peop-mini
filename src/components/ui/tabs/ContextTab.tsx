@@ -117,8 +117,8 @@ export function ContextTab() {
                 {poepStatus.tokenId && (
                   <div className="flex items-center justify-between">
                     <span className="text-neutral-600 dark:text-neutral-300 text-sm">Token ID</span>
-                    <span className="font-mono text-xs text-neutral-500 dark:text-neutral-400">
-                      #{poepStatus.tokenId}
+                    <span className="font-mono text-xs text-neutral-500 dark:text-neutral-400 break-all">
+                      #{poepStatus.tokenId?.substring(0, 10)}...{poepStatus.tokenId?.substring(poepStatus.tokenId.length - 6)}
                     </span>
                   </div>
                 )}
