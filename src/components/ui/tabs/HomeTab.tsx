@@ -664,9 +664,9 @@ export function HomeTab() {
           <div className="spinner-primary w-10 h-10"></div>
         </div>
         <div>
-          <h3 className="text-2xl font-bold">Processing Your Identity</h3>
+          <h3 className="text-2xl font-bold">Identity Verified ✅</h3>
           <p className="text-neutral-500 dark:text-neutral-400">
-            Almost ready to mint your passport...
+            Scroll down and click the button to mint your passport
           </p>
         </div>
       </div>

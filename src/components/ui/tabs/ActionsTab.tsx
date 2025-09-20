@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useMiniKit } from '@coinbase/onchainkit/minikit';
 import { Button } from '../Button';
-import { SignIn } from '../wallet/SignIn';
 
 /**
  * ActionsTab component for PoEP Mini App
@@ -75,10 +74,12 @@ export function ActionsTab() {
             </div>
             <div>
               <h3 className="font-semibold text-accent-800 dark:text-accent-200">Wallet Access</h3>
-              <p className="text-sm text-accent-600 dark:text-accent-300">Connect to manage your assets</p>
+              <p className="text-sm text-accent-600 dark:text-accent-300">Use the Wallet tab to connect your wallet</p>
             </div>
           </div>
-          <SignIn />
+          <div className="text-center text-sm text-accent-600 dark:text-accent-300">
+            Navigate to the Wallet tab to connect MetaMask or Coinbase Wallet
+          </div>
         </div>
       </div>
 

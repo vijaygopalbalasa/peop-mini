@@ -103,11 +103,11 @@ function ConnectionControls({
   }
   return (
     <div className="space-y-3 w-full">
-      <Button onClick={() => connect({ connector: connectors[1] })} className="w-full">
-        Connect Coinbase Wallet
-      </Button>
       <Button onClick={() => connect({ connector: connectors[2] })} className="w-full">
         Connect MetaMask
+      </Button>
+      <Button onClick={() => connect({ connector: connectors[1] })} className="w-full">
+        Connect Coinbase Wallet
       </Button>
     </div>
   );

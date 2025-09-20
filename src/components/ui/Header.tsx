@@ -49,7 +49,7 @@ export function Header({ user }: HeaderProps) {
             <>
               {/* Mobile backdrop */}
               <div
-                className="fixed inset-0 bg-black/20 z-40 md:hidden"
+                className="fixed inset-0 z-40 md:hidden"
                 onClick={() => setIsUserDropdownOpen(false)}
               />
               <div className="absolute top-full right-0 z-50 w-56 mt-1 mx-4 card animate-in slide-in-from-top-2 duration-200 shadow-xl">
