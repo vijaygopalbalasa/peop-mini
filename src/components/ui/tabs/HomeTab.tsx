@@ -664,9 +664,9 @@ export function HomeTab() {
           <div className="spinner-primary w-10 h-10"></div>
         </div>
         <div>
-          <h3 className="text-2xl font-bold">Creating Your Passport</h3>
+          <h3 className="text-2xl font-bold">Processing Your Identity</h3>
           <p className="text-neutral-500 dark:text-neutral-400">
-            This may take a few moments...
+            Almost ready to mint your passport...
           </p>
         </div>
       </div>
@@ -723,9 +723,9 @@ export function HomeTab() {
             <div className="w-16 h-16 mx-auto bg-gradient-to-br from-success-500 to-success-600 rounded-full flex items-center justify-center text-2xl animate-pulse">
               ⚡
             </div>
-            <h4 className="font-semibold text-primary-800 dark:text-primary-200">Ready to Mint Your PoEP!</h4>
+            <h4 className="font-semibold text-primary-800 dark:text-primary-200">Create Your Passport Now!</h4>
             <p className="text-sm text-primary-600 dark:text-primary-300">
-              Click the button below to create your unique Proof-of-Existence Passport
+              Click below to mint your Proof-of-Existence Passport on Base
             </p>
           </div>
 

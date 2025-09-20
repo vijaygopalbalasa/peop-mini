@@ -52,11 +52,11 @@ export function Header({ user }: HeaderProps) {
                 className="fixed inset-0 bg-black/20 z-40 md:hidden"
                 onClick={() => setIsUserDropdownOpen(false)}
               />
-              <div className="absolute top-full right-0 z-50 w-64 mt-1 mx-4 card animate-in slide-in-from-top-2 duration-200 shadow-xl">
-                <div className="p-4 space-y-3">
+              <div className="absolute top-full right-0 z-50 w-56 mt-1 mx-4 card animate-in slide-in-from-top-2 duration-200 shadow-xl">
+                <div className="p-3 space-y-2">
                   <div className="text-right">
                     <h3
-                      className="font-bold text-lg hover:text-primary-600 cursor-pointer transition-colors duration-200 inline-block"
+                      className="font-bold text-base hover:text-primary-600 cursor-pointer transition-colors duration-200 inline-block"
                       onClick={() => sdk.actions.viewProfile({ fid: user.fid })}
                     >
                       {user.displayName || user.username}
